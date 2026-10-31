@@ -1,0 +1,356 @@
+{
+ "recorded": "2026-10-29",
+ "question": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used.",
+ "pointer": "Check the session events, not only the orders.",
+ "runs": [
+  {
+   "arm": "none",
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; ls -R . | grep -v '^./.git' | head -80; git -C brewboard log -3 --stat | head -30"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; cat brewboard/README.md brewboard/warehouse/README.md brewboard/warehouse/models/*.sql brewboard/warehouse/load.py brewboard/inputs/barista-notes.md; sqlite3 brewboard/data/warehouse.sqlite .schema; head -3 logs/session_events/2026-07-01.jsonl; head -5 logs/counter/2026-07-13.log; ls logs/session_events | wc -l; head -5 brewboard/inputs/customer-feedback.csv"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; cat logs/session_events/*.jsonl | python3 -I -c \"\nimport sys,json,collections\nc=collections.Counter()\nfor l in sys.stdin:\n    e=json.loads(l); c[e['event']]+=1; \nprint(c)\"; grep -h -v REJECT logs/counter/*.log | head; cat logs/counter/*.log | awk '{print $4,$5,$6,$7,$8}' | sort | uniq -c | sort -rn | head -20; grep -il \"oat\\|sold\\|out of\" brewboard/inputs/* ; grep -i \"oat\\|sold\\|out of\" brewboard/inputs/customer-feedback.csv | head -30; sqlite3 brewboard/data/warehouse.sqlite \"select min(at),max(at),count(*) from stock_events; select milk,sold_out,count(*) from stock_events group by 1,2; select min(placed_at),max(placed_at),count(*) from orders;\""
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; grep -h saw_sold_out logs/session_events/*.jsonl | head -3; grep -h changed_milk logs/session_events/*.jsonl | head -2; grep -h abandoned_cart logs/session_events/*.jsonl | head -2; grep -h placed_order logs/session_events/*.jsonl | head -2; grep -n -i \"oat\\|sold\\|switch\\|abandon\" brewboard/inputs/six-page-doc.md | head -30"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; python3 -I - <<'E'\nimport json,glob,collections\nS=collections.defaultdict(list)\nfor f in sorted(glob.glob('logs/session_events/*.jsonl')):\n    for l in open(f):\n        e=json.loads(l);S[e['session']].append(e)\nc=collections.Counter();ex=0\nfor s,ev in S.items():\n    so=[i for i,e in enumerate(ev) if e['event']=='saw_sold_out']\n    if not so: continue\n    c['sessions']+=1\n    after=ev[so[0]+1:]\n    names=[e['event'] for e in after]\n    kinds=set(names)\n    if 'changed_milk' in kinds: o='changed'\n    else: o='none'\n    end='placed' if 'placed_order' in kinds or 'placed_order' in [e['event'] for e in ev] else ('abandoned' if 'abandoned_cart' in [e['event'] for e in ev] else 'noend')\n    c[(o,end)]+=1\n    if ex<3: print(json.dumps(ev)[:900]);ex+=1\nprint(c)\nE"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; python3 -I - <<'E'\nimport json,glob,collections\nS=collections.defaultdict(list)\nfor f in sorted(glob.glob('logs/session_events/*.jsonl')):\n    for l in open(f):\n        e=json.loads(l);S[e['session']].append(e)\nm=collections.Counter();to=collections.Counter();base=collections.Counter()\nfor s,ev in S.items():\n    n=[e['event'] for e in ev]\n    if 'saw_sold_out' in n:\n        for e in ev:\n            if e['event']=='saw_sold_out': m[e['milk']]+=1\n        ch=[e for e in ev if e['event']=='changed_milk']\n        if ch: to[ch[0]['to']]+=1\n    else:\n        base['placed' if 'placed_order' in n else 'ab' if 'abandoned_cart' in n else 'other']+=1\nprint(m,to,base)\nE\nsqlite3 data/warehouse.sqlite \"select count(*), sum(converted) from carts\" 2>/dev/null || sqlite3 brewboard/data/warehouse.sqlite \"select count(*),sum(converted) from carts\""
+    }
+   ],
+   "answer": "Most customers switch, but about 4 in 10 leave. That's well above the normal rate.\n\nI analysed the session event logs (1 Jul\u201328 Sep) and found 530 sessions where the customer saw a sold-out milk. Oat was the sold-out milk in 509 of the 565 sold-out views. The rest were almond.\n\n- **Switched milk:** 354 sessions (67%). Of these, 201 chose almond and 125 chose whole milk. The other 28 went to oat, which looks like almond-out cases.\n- **Ordered anyway:** 329 sessions (62%), counting every switcher who then placed an order.\n- **Left without ordering:** 201 sessions (38%). That is 176 who never switched, plus 25 who switched and then left.\n- **Baseline:** sessions that never saw a sold-out milk abandon at 5.1% (2,031 of 40,160). A sold-out view makes leaving about 7\u00d7 more likely.\n\nCaveats:\n- The dashboard's 7.5% abandonment figure in Morgan's doc isn't comparable to these numbers. The abandonment model drops carts open under 60 seconds, which hides quick leavers.\n- The log shows sessions, not why people left.\n- Counter-side outcomes are small: 12 rejected lines, 5 of them oat refunds.\n\n**Sources**\n- `logs/session_events/*.jsonl`\n- `logs/counter/*.log`\n- `brewboard/data/warehouse.sqlite` (the `carts` table)\n- `brewboard/warehouse/models/metric_daily_abandonment.sql`\n- `brewboard/inputs/six-page-doc.md`"
+  },
+  {
+   "arm": "none",
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; ls -R . | grep -v '^./.git' | head -80; git -C brewboard show --stat HEAD | head -30"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>/brewboard; cat README.md warehouse/README.md warehouse/models/*.sql inputs/barista-notes.md; head -c 1500 inputs/six-page-doc.md; head -5 inputs/customer-feedback.csv; sqlite3 data/warehouse.sqlite .schema; ls ../logs/*; head -3 ../logs/session_events/2026-07-01.jsonl; head -20 ../logs/counter/2026-07-13.log"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; cat logs/counter/*.log | head -30; cat logs/counter/*.log | wc -l; cat logs/session_events/*.jsonl | python3 -c \"\nimport sys,json,collections\nc=collections.Counter()\nfor l in sys.stdin:\n    d=json.loads(l); c[(d['event'],tuple(sorted(k for k in d if k not in('ts','store','session','customer','event'))))]+=1\nfor k,v in c.items(): print(k,v)\"; cd brewboard; sqlite3 data/warehouse.sqlite \"select milk,sold_out,count(*),min(at),max(at) from stock_events group by 1,2; select status,count(*) from orders group by 1; select milk,count(*) from order_lines group by 1; select count(*),min(created_at),max(created_at) from carts\"; sed -n 1,60p docs/architecture.md"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; cat logs/session_events/*.jsonl | python3 -c \"\nimport sys,json,collections\nS=collections.defaultdict(list)\nfor l in sys.stdin:\n    d=json.loads(l); S[d['session']].append(d)\nc=collections.Counter(); ms=collections.Counter(); ex=[]\nfor s,ev in S.items():\n    so=[e for e in ev if e['event']=='saw_sold_out']\n    if not so: continue\n    ms[(so[0]['milk'])]+=1\n    kinds=tuple(e['event'] for e in ev[ev.index(so[0]):])\n    k=(so[0]['milk'],)+tuple(dict.fromkeys(kinds))\n    c[k]+=1\n    if len(ex)<3 and 'changed_milk' in kinds: ex.append(ev)\nprint(len(S), sum(ms.values()), ms)\nfor k,v in c.most_common(): print(v,k)\nfor e in ex[0]: print(e)\nfor e in ex[1]: print(e)\n\""
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; cat logs/session_events/*.jsonl | python3 -c \"\nimport sys,json,collections\nS=collections.defaultdict(list)\nfor l in sys.stdin:\n    d=json.loads(l); S[d['session']].append(d)\nto=collections.Counter(); base=[0,0]\nfor s,ev in S.items():\n    so=[e for e in ev if e['event']=='saw_sold_out' and e['milk']=='oat']\n    ab=any(e['event']=='abandoned_cart' for e in ev)\n    if not so:\n        base[0]+=1; base[1]+=ab; continue\n    for e in ev:\n        if e['event']=='changed_milk': to[e['to']]+=1\nprint(to, base, base[1]/base[0])\n\"; sqlite3 brewboard/data/warehouse.sqlite \"select count(*) from carts where converted=0 and (julianday(last_activity_at)-julianday(created_at))*86400<60\""
+    }
+   ],
+   "answer": "Checking the session logs now, and I have what I need.\n\n**Most customers switch, but a large minority leave.**\n\n- 477 sessions saw oat marked sold out (Jul 1 \u2013 Sep 28).\n- 311 (65%) changed milk. Of the 332 milk changes, 213 went to almond and 119 to whole.\n- 288 sessions (60%) ended in a placed order.\n- 189 sessions (40%) ended in an abandoned cart. 166 of these never switched. The other 23 switched and still left.\n- Comparison: sessions with no sell-out abandon at 5.1% (2,043 of 40,213). Oat sell-outs abandon at about eight times that rate.\n- Almond sell-outs (53 sessions) show the same pattern: 41 ordered and 12 (23%) left.\n\n**Caveats**\n- This only covers customers who saw the sold-out message in the app. Sam's notes say people can still order oat for a few minutes after the barista marks it out.\n- Those customers hit the counter log instead. It has 12 rejects, 7 of them oat. 6 oat lines were refunded and 4 were made with almond. The oat count is small, but it is a further loss.\n- The dashboard abandonment tile drops carts open under 60 seconds. 25 abandoned carts were dropped that way, so the tile slightly undercounts quick exits.\n- I counted from `saw_sold_out` events. I did not compare against oat demand on days with no sell-out.\n\n**Sources**\n- `logs/session_events/*.jsonl`\n- `brewboard/data/warehouse.sqlite` (`carts`)\n- `brewboard/warehouse/models/metric_daily_abandonment.sql`\n- `logs/counter/*.log`\n- `brewboard/inputs/barista-notes.md`"
+  },
+  {
+   "arm": "pointer",
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used. Check the session events, not only the orders.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; ls -la brewboard logs; git -C brewboard log --stat -3 | head -40"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ..; cat brewboard/README.md; ls brewboard/data brewboard/docs brewboard/inputs brewboard/warehouse brewboard/warehouse/*; ls logs/counter; ls logs/session_events | head -5; ls logs/session_events | wc -l; cat brewboard/warehouse/README.md brewboard/warehouse/models/*; cat brewboard/inputs/barista-notes.md"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../brewboard; sqlite3 data/warehouse.sqlite '.schema'; sqlite3 data/warehouse.sqlite 'select * from stock_events limit 5; select count(*) from stock_events;'; head -c 1500 ../logs/session_events/2026-07-01.jsonl; echo; cat ../logs/counter/2026-07-13.log | head -20; cat docs/architecture.md; ls docs/postmortems"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../logs; cat session_events/*.jsonl | python3 -c \"\nimport sys,json,collections\nc=collections.Counter()\nfor l in sys.stdin:\n    e=json.loads(l); c[e['event']]+=1\nprint(c)\"; grep -h -v '\"event\": \"\\(session_start\\|viewed_drink\\|added_to_cart\\|placed_order\\)\"' session_events/*.jsonl | head -8; cat counter/*.log | head -30; cat counter/*.log | wc -l; cat ../brewboard/brewboard/stock.py"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>/logs; grep -h saw_sold_out session_events/*.jsonl | head -3; grep -h changed_milk session_events/*.jsonl | head -3; python3 -I - <<'E'\nimport glob,json,collections\nS=collections.defaultdict(list)\nfor f in sorted(glob.glob('session_events/*.jsonl')):\n    for l in open(f):\n        e=json.loads(l); S[e['session']].append(e)\nc=collections.Counter(); milks=collections.Counter(); ex=[]\nfor s,ev in S.items():\n    for i,e in enumerate(ev):\n        if e['event']=='saw_sold_out':\n            rest=[x['event'] for x in ev[i+1:]]\n            milk=e.get('milk')\n            milks[milk]+=1\n            key=('oat' if milk=='oat' else 'other', 'switched' if 'changed_milk' in rest else '-', 'ordered' if 'placed_order' in rest else '-','abandoned' if 'abandoned_cart' in rest else '-')\n            c[key]+=1\n            if len(ex)<2: ex.append(ev)\nprint(milks)\nfor k,v in sorted(c.items()):print(k,v)\nfor e in ex[:1]:\n    for x in e:print(x)\nE"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>/logs; python3 -I - <<'E'\nimport glob,json,collections\nS=collections.defaultdict(list)\nfor f in sorted(glob.glob('session_events/*.jsonl')):\n    for l in open(f):\n        e=json.loads(l); S[e['session']].append(e)\nto=collections.Counter(); n=0; ab=0; so=set()\nfor s,ev in S.items():\n    if any(x['event']=='saw_sold_out' and x['milk']=='oat' for x in ev):\n        so.add(s)\n        for x in ev:\n            if x['event']=='changed_milk' and x['from']=='oat': to[x['to']]+=1\nrest=[ev for s,ev in S.items() if s not in so]\nab=sum(any(x['event']=='abandoned_cart' for x in ev) for ev in rest)\nprint(to, len(rest), ab, ab/len(rest))\nE"
+    }
+   ],
+   "answer": "Most customers switch. About 6 in 10 switch and order, and about 4 in 10 leave.\n\n- **Oat sold out:** 509 sessions saw it (Jul\u2013Sep, 90 days of session events).\n- **Switched milk:** 332 (65%). They moved to almond (213) or whole (119).\n- **Switched and ordered:** 309 of the 332 (93%).\n- **Left without ordering:** 200 (39%) logged an abandoned cart. 177 never switched and 23 switched but still left.\n- **Baseline:** sessions that never saw a sold-out milk abandon at 5.1% (2,043 of 40,213). Sold-out abandonment is about 8\u00d7 higher.\n\nAlmond sold out in 56 sessions, with a similar pattern (43 switched and ordered, 13 abandoned).\n\n**Orders alone hide the 200 who left.** Orders show only the switchers.\n\n**Stale oat in the app:** `stock.py` caches stock reads for 5 minutes. Customers can still order oat after the barista marks it out. That produced 12 counter rejections, 8 with oat (4 refunds, 4 made with almond). The other 4 were almond: 1 refund and 3 not in the log. Sam's note about almond substitutions is consistent with this, but these counts are small.\n\n**Caveats:** `abandoned_cart` is a logged event, not proof the customer left for good. They may have ordered another time. The warehouse abandonment tile drops carts open under 60 seconds, so it won't match these counts.\n\n**Sources:**\n- `logs/session_events/*.jsonl` (`saw_sold_out`, `changed_milk`, `placed_order`, `abandoned_cart`)\n- `logs/counter/*.log`\n- `brewboard/brewboard/stock.py`\n- `brewboard/inputs/barista-notes.md`"
+  },
+  {
+   "arm": "pointer",
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used. Check the session events, not only the orders.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; ls -la brewboard logs; git -C brewboard log --stat -3 | head -40"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; cat brewboard/README.md; ls -R brewboard/data brewboard/docs brewboard/inputs brewboard/warehouse brewboard/contracts; ls logs/counter; ls logs/session_events | head -5; cat brewboard/inputs/barista-notes.md; cat brewboard/warehouse/README.md"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; cat brewboard/docs/architecture.md brewboard/warehouse/models/*.sql; sqlite3 brewboard/data/warehouse.sqlite .schema; head -c 1500 logs/session_events/2026-07-01.jsonl; echo; head -20 logs/counter/2026-07-13.log; head -30 brewboard/inputs/six-page-doc.md"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; cat logs/session_events/*.jsonl | python3 -I -c \"\nimport sys,json,collections\nc=collections.Counter();k=collections.Counter()\nfor l in sys.stdin:\n    d=json.loads(l);c[d['event']]+=1;k[tuple(sorted(d))]+=1\nprint(c);\nfor a,b in k.items():print(b,a)\n\"; ls logs/session_events | sed -n '1p;$p'; ls logs/session_events|wc -l; cat logs/counter/*.log | wc -l; cat logs/counter/*.log | sed 's/order=[0-9]*//;s/^[^ ]* //' | sort | uniq -c | sort -rn | head -20; sqlite3 brewboard/data/warehouse.sqlite \"select min(placed_at),max(placed_at),count(*) from orders; select milk,count(*) from order_lines group by 1; select store_id,milk,sold_out,count(*),min(at),max(at) from stock_events group by 1,2,3;\""
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; python3 -I - <<'E'\nimport json,glob,collections\nS=collections.defaultdict(list)\nfor f in sorted(glob.glob('logs/session_events/*.jsonl')):\n    for l in open(f):\n        d=json.loads(l);S[d['session']].append(d)\nc=collections.Counter();ex=[]\nmilks=collections.Counter()\nfor s,ev in S.items():\n    so=[i for i,e in enumerate(ev) if e['event']=='saw_sold_out']\n    if not so: continue\n    milks[ev[so[0]]['milk']]+=1\n    if ev[so[0]]['milk']!='oat': continue\n    after=ev[so[0]+1:]\n    names=tuple(e['event'] for e in after)\n    ch=[e for e in after if e['event']=='changed_milk']\n    key=('changed:'+ch[0]['to'] if ch else 'nochange', 'placed' if any(e['event']=='placed_order' for e in after) else 'noplace', 'abandon' if any(e['event']=='abandoned_cart' for e in after) else 'noabandon')\n    c[key]+=1\n    if len(ex)<3 and not ch: ex.append(ev)\nprint(milks);\nfor k,v in sorted(c.items()):print(v,k)\nprint(sum(c.values()))\nfor e in ex:\n    for x in e:print(x)\n    print()\nE"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; python3 -I - <<'E'\nimport json,glob,collections,datetime as D\nS=collections.defaultdict(list)\nfor f in sorted(glob.glob('logs/session_events/*.jsonl')):\n    for l in open(f):\n        d=json.loads(l);S[d['session']].append(d)\nt=lambda e:D.datetime.fromisoformat(e['ts'])\ndur=[];tot=0;ab=0;abso=0;abnoso=0;short=0\nfor s,ev in S.items():\n    a=[e for e in ev if e['event']=='abandoned_cart']\n    if not a: continue\n    ab+=1\n    so=any(e['event']=='saw_sold_out' for e in ev)\n    d=(t(a[0])-t(ev[0])).total_seconds()\n    if so: abso+=1; dur.append(d)\n    if d<60: short+=1\nprint('abandoned sessions',ab,'with sold-out',abso,'dur<60 among sold-out',sum(x<60 for x in dur),'median',sorted(dur)[len(dur)//2])\nprint('total sessions',len(S),'placed',sum(any(e['event']=='placed_order' for e in v) for v in S.values()))\nE\nsqlite3 data/warehouse.sqlite \"select count(*),sum(converted=0) from carts; select sum(carts),sum(abandoned),1.0*sum(abandoned)/sum(carts) from metric_daily_abandonment;\" 2>/dev/null || sqlite3 brewboard/data/warehouse.sqlite \"select count(*),sum(converted=0) from carts; select sum(carts),sum(abandoned),1.0*sum(abandoned)/sum(carts) from metric_daily_abandonment;\""
+    }
+   ],
+   "answer": "**Most customers switch, but about 40% leave.** Of 477 sessions where a customer saw oat sold out, 311 (65%) changed milk and 166 (35%) did not.\n\n| Outcome | Sessions | Share |\n|---|---|---|\n| Switched to almond and ordered | 185 | 39% |\n| Switched to whole and ordered | 103 | 22% |\n| Switched, then still abandoned | 23 | 5% |\n| Left without switching | 166 | 35% |\n\n- **Kept:** 288 of 477 (60%) ended up placing an order.\n- **Lost:** 189 (40%) abandoned. That includes the 23 who switched first.\n- **Almond is the main fallback.** It took 64% of the switchers, whole milk 36%.\n\n**The dashboard hides the leavers.** All 166 non-switchers abandoned within a median of 44 seconds with an empty cart. The abandonment model drops carts open under 60 seconds as \"bounces\", so the 7.5% tile excludes almost all of them.\n\n**Counter logs:** the 12 counter-rejection lines I found (8 sample days) show oat orders slipping through after sell-out. Six were refunded and six were made with almond. That is a small sample and a separate problem from the 477 sessions.\n\n**Sources:**\n- `logs/session_events/*.jsonl`, 2026-07-01 to 2026-09-28: `saw_sold_out`, `changed_milk`, `placed_order`, `abandoned_cart` events\n- `brewboard/warehouse/models/metric_daily_abandonment.sql` and `data/warehouse.sqlite`\n- `logs/counter/*.log`\n- `inputs/barista-notes.md`"
+  },
+  {
+   "arm": "product",
+   "cwd": "product",
+   "announced_logs": false,
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "ls -laR | head -100"
+    },
+    {
+     "tool": "Bash",
+     "what": "cat data/README.md docs/architecture.md docs/postmortems/*.md inputs/barista-notes.md; head -c 1500 inputs/customer-feedback.csv; echo; cat inputs/six-page-doc.md; sqlite3 data/warehouse.sqlite .schema"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>/product/data && sqlite3 -header warehouse.sqlite \"\nselect count(*) n, min(placed_at), max(placed_at) from orders;\nselect milk, sold_out, count(*) from stock_events group by 1,2;\nselect count(*), count(distinct customer_id), sum(customer_id is null) from orders;\nselect milk,count(*) from order_lines group by 1;\nselect count(*), sum(converted), min(created_at), max(created_at) from carts;\nselect * from stock_events order by at limit 6;\nselect * from carts limit 3;\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 -header warehouse.sqlite \"\ncreate temp view w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.at>e.at and e2.sold_out=0) e from stock_events e where milk='oat' and sold_out=1;\nselect count(*), sum(e is null) from w;\nselect count(*), round(avg((julianday(e)-julianday(s))*24),1) hrs from w;\n-- carts in vs out of window\ncreate temp table c as select c.*, exists(select 1 from w where w.store_id=c.store_id and c.created_at>=w.s and c.created_at<coalesce(w.e,'9')) soldout from carts c;\nselect soldout, count(*), sum(converted), round(1.0*sum(1-converted)/count(*),4) abandon from c group by 1;\n-- afternoon only (12-20h)\nselect soldout, count(*), round(1.0*sum(1-converted)/count(*),4) from c where substr(created_at,12,2) between '12' and '19' group by 1;\nselect * from metric_daily_abandonment limit 3;\nselect round(avg(rate),4), round(1.0*sum(abandoned)/sum(carts),4) from metric_daily_abandonment;\n\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 -header warehouse.sqlite \"\ncreate temp view w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.at>e.at and e2.sold_out=0) e from stock_events e where milk='oat' and sold_out=1;\ncreate temp table o as select o.order_id,o.customer_id,o.store_id,o.placed_at, exists(select 1 from w where w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.e) so, substr(o.placed_at,12,2) h from orders o;\n-- milk mix of milk lines, afternoon 13-19\nselect so, l.milk, count(*) n, round(100.0*count(*)/sum(count(*)) over (partition by so),1) pct from o join order_lines l using(order_id) where l.milk<>'' and h between '13' and '19' group by 1,2;\nselect so, count(*) from o where h between '13' and '19' group by 1;\n-- loyal oat customers: oat orders before; behaviour in windows\ncreate temp table oc as select customer_id from orders o join order_lines l using(order_id) where l.milk='oat' group by 1 having count(*)>=5;\nselect count(*) from oc;\nselect o.so, l.milk, count(*) n from o join oc using(customer_id) join order_lines l using(order_id) where l.milk<>'' and h between '13' and '19' group by 1,2;\nselect o.so, count(*) orders, count(distinct customer_id) cust from o join oc using(customer_id) where h between '13' and '19' group by 1;\n\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 -header warehouse.sqlite \"\ncreate temp view w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.at>e.at and e2.sold_out=0) e from stock_events e where milk='oat' and sold_out=1;\n-- store-hours 13-19 in vs out of windows (hourly grid per store/day)\ncreate temp table g as with recursive d(day) as (select '2026-07-01' union all select date(day,'+1 day') from d where day<'2026-09-28'), hh(h) as (select 13 union all select h+1 from hh where h<19) select st.store_id, d.day||'T'||printf('%02d',hh.h)||':30:00' t from stores st, d, hh;\ncreate temp table gs as select g.*, exists(select 1 from w where w.store_id=g.store_id and g.t>=w.s and g.t<w.e) so from g;\nselect so, count(*) store_hours from gs group by 1;\ncreate temp table oo as select o.*, substr(placed_at,1,13) hr from orders o where substr(placed_at,12,2) between '13' and '19';\nselect (select so from gs where gs.store_id=oo.store_id and substr(gs.t,1,13)=oo.hr) so, count(*) orders from oo group by 1;\n\""
+    }
+   ],
+   "answer": "**Mostly they switch. Very few leave.** This covers Jul 1 to Sep 28, using 80 oat sell-out windows, averaging 15 hours each.\n\n- **Oat share of afternoon milk orders:** 28.9% outside sell-outs, 0.7% during them.\n- **Where the oat orders went:** almond rose from 16.2% to 28.6% and whole milk from 55.0% to 70.6%. Almond gained 12 points and whole milk 16, which together match the oat loss.\n- **Order volume (1\u20137pm):** 5.32 orders per store-hour during sell-outs and 5.55 outside, about 4% lower. That is the upper bound on customers who leave.\n- **Cart abandonment (1\u20137pm):** 4.99% during sell-outs and 4.85% outside, effectively no change.\n- **Loyal oat customers (5+ oat orders):** 486 afternoon orders during sell-outs, and 91% of the milk lines were almond or whole milk.\n\n**Caveats**\n- The data shows what people ordered, not why. A customer who stays home doesn't appear in it.\n- The proposal doc's 7.5% abandonment baseline comes from the dashboard. The raw carts table gives 5.1% overall (2,066 of 40,524 carts).\n- No numbers back the doc's claim that sell-outs drive abandonment.\n- Customer feedback does contain \"left\" comments.\n\n**Sources**\n- `data/warehouse.sqlite`: `stock_events`, `orders`, `order_lines`, `carts`, `metric_daily_abandonment`\n- `inputs/customer-feedback.csv`\n- `inputs/six-page-doc.md`"
+  },
+  {
+   "arm": "product",
+   "cwd": "product",
+   "announced_logs": false,
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "ls -laR | head -100"
+    },
+    {
+     "tool": "Bash",
+     "what": "cat data/README.md docs/architecture.md docs/postmortems/* inputs/barista-notes.md; head -5 inputs/customer-feedback.csv; sqlite3 data/warehouse.sqlite .schema"
+    },
+    {
+     "tool": "Read",
+     "what": "<starter>/product/inputs/six-page-doc.md"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd <starter>/product/data && sqlite3 -header warehouse.sqlite \"\nselect count(*),min(placed_at),max(placed_at) from orders;\nselect milk,count(*) from order_lines group by 1;\nselect milk,sold_out,count(*) ,min(at),max(at) from stock_events group by 1,2;\nselect status,count(*) from orders group by 1;\nselect count(*),sum(converted),count(distinct session_id) from carts;\nselect count(*), count(customer_id), count(distinct customer_id) from orders;\nselect * from stock_events limit 6;\nselect * from carts limit 3;\nselect * from orders limit 3;\nselect store_id,count(*) from stock_events group by 1;\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 -header warehouse.sqlite \"\ncreate temp table w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.sold_out=0 and e2.at>e.at) en from stock_events e where milk='oat' and sold_out=1;\nselect count(*), sum(en is null), round(avg((julianday(en)-julianday(s))*24),2) hrs from w;\n-- orders with oat lines in/out windows\ncreate temp table o as select o.*, exists(select 1 from w where w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.en) inw from orders o;\ncreate temp table ol as select o.order_id,o.customer_id,o.inw,o.placed_at, max(milk='oat') hasoat, max(milk='almond') hasalm, max(milk='whole') haswh from o join order_lines l using(order_id) where l.milk is not null group by 1;\nselect inw,count(*),sum(hasoat),sum(hasalm),sum(haswh) from ol group by 1;\nselect inw,count(*) from o group by 1;\n-- hours in windows vs outside\nselect sum((julianday(en)-julianday(s))*24) from w;\n\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 -header warehouse.sqlite \"\nselect substr(placed_at,12,2) h,count(*) from orders group by 1;\ncreate temp table w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.sold_out=0 and e2.at>e.at) en from stock_events e where milk='oat' and sold_out=1;\nselect count(*), min(substr(s,12,5)),max(substr(s,12,5)) from w;\nselect date(s) d,store_id from w group by 1,2 having count(*)>1 limit 3;\nselect store_id,count(*) from w group by 1;\n\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 -header warehouse.sqlite \"\ncreate temp table w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.sold_out=0 and e2.at>e.at) en from stock_events e where milk='oat' and sold_out=1;\n-- window part same day: s to 20:00 (cap at en)\ncreate temp table ww as select store_id, s, min(en, date(s)||'T20:00:00') e from w;\n-- in-window orders\ncreate temp table oi as select o.order_id,o.customer_id,o.store_id,o.placed_at,o.session_id from orders o join ww on ww.store_id=o.store_id and o.placed_at>=ww.s and o.placed_at<ww.e;\nselect 'in-window orders',count(*) from oi;\nselect 'in-window hours',round(sum((julianday(e)-julianday(s))*24),1) from ww;\n-- baseline: same store, same time-of-day span, on days without a window for that store\ncreate temp table b as select ww.store_id, ww.s s0, d.day from ww join (select distinct date(placed_at) day from orders) d on not exists(select 1 from w x where x.store_id=ww.store_id and date(x.s)=d.day);\ncreate temp table ob as select o.order_id from b join ww on ww.store_id=b.store_id and ww.s=b.s0 join orders o on o.store_id=b.store_id and date(o.placed_at)=b.day and substr(o.placed_at,12)>=substr(ww.s,12) and substr(o.placed_at,12)<substr(ww.e,12);\nselect 'baseline orders (sum over matched slots)',count(*), (select count(*) from b) from ob;\nselect 'milk mix in-window', l.milk,count(*) from oi join order_lines l using(order_id) where l.milk is not null group by 2;\nselect 'milk mix baseline', l.milk,count(*) from ob join order_lines l using(order_id) where l.milk is not null group by 2;\n\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 -header warehouse.sqlite \"\ncreate temp table w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.sold_out=0 and e2.at>e.at) en from stock_events e where milk='oat' and sold_out=1;\nselect 'in-window carts', count(*), sum(1-converted) ab, round(1.0*sum(1-converted)/count(*),4) rate from carts c where exists(select 1 from w where w.store_id=c.store_id and c.created_at>=w.s and c.created_at<w.en);\nselect 'afternoon outside windows', count(*), sum(1-converted), round(1.0*sum(1-converted)/count(*),4) from carts c where substr(created_at,12,5) between '12:11' and '19:59' and not exists(select 1 from w where w.store_id=c.store_id and c.created_at>=w.s and c.created_at<w.en);\nselect 'all', round(1.0*sum(1-converted)/count(*),4) from carts;\n-- oat-loyal customers: >=60% oat lines outside windows\ncreate temp table cl as select o.customer_id, avg(l.milk='oat') p, count(*) n from orders o join order_lines l using(order_id) where l.milk is not null and not exists(select 1 from w where w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.en) group by 1 having n>=5;\nselect count(*), sum(p>=0.6) from cl;\n\""
+    }
+   ],
+   "answer": "**Most customers switch. A minority leave, and the data can't show who they are.**\n\nI compared the 80 oat sold-out windows (Jul\u2013Sep 2026, afternoon until the nightly reset) with the same store and hours on days with no sell-out. Figures are per window-slot.\n\n| | Normal | Sold out |\n|---|---|---|\n| Oat lines | 6.5 | 0.2 |\n| Almond lines | 3.6 | 6.1 |\n| Whole-milk lines | 12.5 | 15.0 |\n| Orders | 30.5 | 29.4 (\u22123.6%) |\n\n- About 78% of the missing oat lines come back as almond or whole milk (+4.9 of \u22126.3).\n- The rest, about 1.4 lines per window-slot, are either not ordered or are food-only orders. Order count falls only 3.6%.\n- Cart abandonment is 5.0% in windows versus 4.8% in the same hours on normal days. That gap is tiny, so sell-outs barely move abandonment.\n- Sixteen oat lines were ordered during windows, which matches Sam's note that the app lags the board.\n\n**Caveats**\n- This is aggregate only. I didn't track individual oat-loyal customers, and 798 customers in the warehouse are mostly-oat buyers.\n- The warehouse has no record of who saw a sold-out message and left.\n- The six-page doc's 7.5% abandonment baseline doesn't match the warehouse, where carts show 5.1% overall.\n\n**Sources:** `data/warehouse.sqlite` (`stock_events`, `orders`, `order_lines`, `carts`), `inputs/barista-notes.md`, `inputs/six-page-doc.md`."
+  },
+  {
+   "arm": "quiet",
+   "cwd": "brewboard",
+   "announced_logs": false,
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "git ls-files | head -100 && git show --stat HEAD | head -30"
+    },
+    {
+     "tool": "Bash",
+     "what": "cat inputs/barista-notes.md; head -5 inputs/customer-feedback.csv; cat warehouse/README.md warehouse/models/*.sql; cat inputs/six-page-doc.md; ls; ls *.db data 2>/dev/null"
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 data/warehouse.sqlite \".schema\" && sqlite3 data/warehouse.sqlite \"select count(*) from carts; select count(*) from orders; select count(*) from order_lines; select * from stock_events limit 5; select * from menu_items;\" ; cat warehouse/load.py | head -80"
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 data/warehouse.sqlite \"\nselect milk, sold_out, count(*) from stock_events group by 1,2;\nselect milk,count(*) from order_lines group by 1;\nselect status,count(*) from orders group by 1;\nselect min(placed_at),max(placed_at) from orders;\nselect store_id, count(*) from carts group by 1;\nselect converted,count(*) from carts group by 1;\n\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 data/warehouse.sqlite \"\ncreate temp table w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.sold_out=0 and e2.at>e.at) e from stock_events e where milk='oat' and sold_out=1;\nselect count(*), sum(e is null), round(avg((julianday(e)-julianday(s))*24),2), min((julianday(e)-julianday(s))*24), max((julianday(e)-julianday(s))*24) from w;\nselect * from w limit 5;\n-- orders in window\ncreate temp table o as select o.order_id,o.store_id,o.placed_at, (select group_concat(distinct milk) from order_lines l where l.order_id=o.order_id) m, exists(select 1 from w where w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.e) inw from orders o;\nselect inw, count(*) from o group by 1;\nselect inw, ol.milk, count(*), round(100.0*count(*)/sum(count(*)) over (partition by inw),1) from o join order_lines ol using(order_id) where ol.milk is not null group by 1,2;\nselect inw, ol.milk, count(*) from o join order_lines ol using(order_id) group by 1,2;\n\""
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 data/warehouse.sqlite \"\ncreate temp table w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.sold_out=0 and e2.at>e.at) e from stock_events e where milk='oat' and sold_out=1;\n-- open hours\nselect substr(placed_at,12,2) h,count(*) from orders group by 1;\n\" | tr '\\n' ' '; echo\nsqlite3 data/warehouse.sqlite \"\ncreate temp table w as select store_id, at s, (select min(at) from stock_events e2 where e2.store_id=e.store_id and e2.milk='oat' and e2.sold_out=0 and e2.at>e.at) e from stock_events e where milk='oat' and sold_out=1;\n-- store-days with sellout; compare orders per day after sellout time-of-day vs same clock period on non-sellout days\ncreate temp table sd as select store_id, substr(s,1,10) d, substr(s,12,8) t from w;\nselect count(*), min(t), max(t) from sd;\ncreate temp table days as select distinct store_id, substr(placed_at,1,10) d from orders;\n-- afternoon after sellout: orders between sellout time and 19:59 on sellout days\nselect 'sellout-days', count(*) , sum(case when 1 then 1 end) from sd;\n\"\n"
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 data/warehouse.sqlite \"\ncreate temp table sd as select store_id, substr(at,1,10) d, substr(at,12,8) t, at s from stock_events where milk='oat' and sold_out=1;\n-- afternoon (12:00-20:00) store-days\ncreate temp table ord as select o.store_id, substr(placed_at,1,10) d, substr(placed_at,12,8) t, order_id from orders o where substr(placed_at,12,2)>='12';\ncreate temp table crt as select store_id, substr(created_at,1,10) d, substr(created_at,12,8) t, converted, (julianday(last_activity_at)-julianday(created_at))*86400 secs from carts where substr(created_at,12,2)>='12';\n-- sellout days: after-sellout vs before-sellout order rate per hour\nselect 'sellout-day before', count(*), round(sum(1.0)/ (80*0+1),0) from ord join sd using(store_id,d) where ord.t<sd.t;\nselect 'sellout-day orders before/after per hr',\n round(1.0*(select count(*) from ord join sd using(store_id,d) where ord.t<sd.t)/(select sum((strftime('%s','1970-01-01 '||t)-strftime('%s','1970-01-01 12:00:00'))/3600.0) from sd),2),\n round(1.0*(select count(*) from ord join sd using(store_id,d) where ord.t>=sd.t)/(select sum((strftime('%s','1970-01-01 20:00:00')-strftime('%s','1970-01-01 '||t))/3600.0) from sd),2);\nselect 'nonsellout-day per hr', round(1.0*count(*)/ ((select count(*) from (select distinct store_id,substr(placed_at,1,10) from orders)) - 80)/8,2) from ord where not exists (select 1 from sd where sd.store_id=ord.store_id and sd.d=ord.d);\nselect 'sellout-days', 'carts after', count(*), sum(converted=0), round(100.0*sum(converted=0)/count(*),2) from crt join sd using(store_id,d) where crt.t>=sd.t;\nselect 'sellout-days', 'carts before', count(*), sum(converted=0), round(100.0*sum(converted=0)/count(*),2) from crt join sd using(store_id,d) where crt.t<sd.t;\nselect 'nonsellout carts', count(*), sum(converted=0), round(100.0*sum(converted=0)/count(*),2) from crt where not exists (select 1 from sd where sd.store_id=crt.store_id and sd.d=crt.d);\nselect 'sellout-after >=60s', count(*), sum(converted=0), round(100.0*sum(converted=0)/count(*),2) from crt join sd using(store_id,d) where crt.t>=sd.t and secs>=60;\nselect 'nonsellout >=60s', count(*), sum(converted=0), round(100.0*sum(converted=0)/count(*),2) from crt where secs>=60 and not exists (select 1 from sd where sd.store_id=crt.store_id and sd.d=crt.d);\n\""
+    }
+   ],
+   "answer": "**Mostly they switch. A small share may leave, but the data can't pin that down.**\n\nI compared 80 oat sell-outs (3 stores, Jul\u2013Sep 2026, 12:11\u201316:57 start) with other times.\n\n- **Switching:** Oat was 28.8% of milk lines outside sell-outs (7,682 of 26,675). During sell-outs it was 0.9% (16 of 1,700). Almond rose from 16.4% to 28.7%, and whole milk from 54.8% to 70.4%.\n- **Leaving:** Afternoon orders ran 5.29/hour after a sell-out, against 5.56/hour on days without one (about \u22125%). Before the sell-out on the same days, they ran 5.71/hour. That is a small dip and could be noise.\n- **Abandonment:** The share of carts that never became orders was 4.99% after a sell-out and 4.82% on days without one. That is no meaningful change. Using the dashboard's 60-second filter, it was 6.23% after and 7.15% without, so no increase either way.\n\n**Caveats**\n- Carts record no milk, so I can't see individual oat customers leave. The ~5% dip is an upper bound on lost orders.\n- Baristas say they sometimes make almond but leave the ticket as oat, so oat is probably over-counted and almond under-counted.\n- The \"7.5% abandonment\" in the proposal is the dashboard figure. It counts only carts open 60 seconds or longer; without that filter it is 5.1%.\n- Nothing here supports the proposal's \"40% reduction in sell-out abandonment.\"\n\n**Sources:** `data/warehouse.sqlite` (`stock_events`, `orders`, `order_lines`, `carts`), `inputs/barista-notes.md`, `inputs/six-page-doc.md`, `warehouse/models/metric_daily_abandonment.sql`"
+  },
+  {
+   "arm": "quiet",
+   "cwd": "brewboard",
+   "announced_logs": false,
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "git ls-files | head -100 && git show --stat HEAD | head -30"
+    },
+    {
+     "tool": "Bash",
+     "what": "cat inputs/barista-notes.md; head -5 inputs/customer-feedback.csv; cat warehouse/README.md warehouse/models/*.sql; cat inputs/six-page-doc.md; ls; ls -a"
+    },
+    {
+     "tool": "Bash",
+     "what": "ls -la data; cat .gitignore; cat warehouse/load.py | head -80; sed -n 1,80p brewboard/db.py"
+    },
+    {
+     "tool": "Bash",
+     "what": "sqlite3 -readonly data/warehouse.sqlite \".tables\" \"select count(*),min(created_at),max(created_at) from carts\" \"select count(*),min(placed_at),max(placed_at) from orders\" \"select milk,sold_out,count(*),min(at),max(at) from stock_events group by 1,2\" \"select milk,count(*) from order_lines group by 1\" \"select status,count(*) from orders group by 1\" \"select * from carts limit 3\" \"select * from order_lines limit 3\" \"select * from stock_events limit 3\"; grep -n -i \"cart\\|session\\|stock\" brewboard/orders.py brewboard/stock.py brewboard/events.py | head -60"
+    },
+    {
+     "tool": "Bash",
+     "what": "cat brewboard/stock.py; sed -n 1,12p brewboard/orders.py; ls logs 2>&1; sqlite3 -readonly data/warehouse.sqlite \"select store_id,count(*) from stock_events group by 1\" \"select * from stores\""
+    },
+    {
+     "tool": "Bash",
+     "what": "cat > /tmp/an.sql <<'EOF'\ncreate temp table w as\nselect store_id, at as s, coalesce(lead(at) over (partition by store_id order by at), '9999') as e\nfrom (select * from stock_events where milk='oat') where sold_out=1;\n-- fix: end = next oat event after start\ndrop table w;\ncreate temp table w as\nselect a.store_id, a.at s, (select min(b.at) from stock_events b where b.store_id=a.store_id and b.milk='oat' and b.at>a.at and b.sold_out=0) e\nfrom stock_events a where a.milk='oat' and a.sold_out=1;\nselect 'windows',count(*),round(avg((julianday(e)-julianday(s))*24),2),sum(e is null) from w;\ncreate temp table o as select o.*, case when exists(select 1 from w where w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.e) then 1 else 0 end oatout from orders o;\ncreate temp table ml as select o.order_id,o.oatout,o.customer_id,l.milk from o join order_lines l using(order_id) where l.milk is not null;\nselect 'milk drinks by oatout', oatout, milk, count(*) from ml group by 2,3;\ncreate temp table c as select c.*, case when exists(select 1 from w where w.store_id=c.store_id and c.created_at>=w.s and c.created_at<w.e) then 1 else 0 end oatout from carts c;\nselect 'carts', oatout, count(*), sum(converted=0), round(1.0*sum(converted=0)/count(*),4) from c group by 2;\nselect 'carts>=60s', oatout, count(*), sum(converted=0), round(1.0*sum(converted=0)/count(*),4) from c where (julianday(last_activity_at)-julianday(created_at))*86400>=60 group by 2;\nEOF\nsqlite3 -readonly data/warehouse.sqlite < /tmp/an.sql"
+    },
+    {
+     "tool": "Bash",
+     "what": "cat > /tmp/an2.sql <<'EOF'\ncreate temp table w as\nselect a.store_id, a.at s, (select min(b.at) from stock_events b where b.store_id=a.store_id and b.milk='oat' and b.at>a.at and b.sold_out=0) e\nfrom stock_events a where a.milk='oat' and a.sold_out=1;\nselect 'window start hours', substr(s,12,2) h, count(*) from w group by 2;\n-- orders per store-hour: in-window store-hours vs same store, same hour-of-day, days without window at that hour\ncreate temp table sh as select distinct o.store_id, substr(o.placed_at,1,13) sh from orders o;\ncreate temp table oh as select store_id, substr(placed_at,1,13) sh, count(*) n,\n sum(exists(select 1 from w where w.store_id=orders.store_id and orders.placed_at>=w.s and orders.placed_at<w.e)) inw\nfrom orders group by 1,2;\nselect 'orders/store-hour 12-18 (in window hour vs not)', (inw>0) iw, count(*), round(avg(n),2), sum(n)\nfrom oh where cast(substr(sh,12,2) as int) between 13 and 18 group by 2;\n-- customers: oat-habit (>=3 oat drinks outside windows) behaviour in windows\ncreate temp table oatc as select o.customer_id from orders o join order_lines l using(order_id) where l.milk='oat' and o.customer_id is not null and o.customer_id!='' group by 1 having count(*)>=3;\nselect 'oat-habit customers', count(*) from oatc;\nselect 'their window orders milk', l.milk, count(*) from orders o join order_lines l using(order_id) join w on w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.e where o.customer_id in (select customer_id from oatc) and l.milk is not null group by 2;\nEOF\nsqlite3 -readonly data/warehouse.sqlite < /tmp/an2.sql"
+    },
+    {
+     "tool": "Bash",
+     "what": "cat >> /tmp/an2.sql <<'EOF'\nselect 'habit outside mix', l.milk, count(*) from orders o join order_lines l using(order_id) where o.customer_id in (select customer_id from oatc) and l.milk is not null and not exists(select 1 from w where w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.e) group by 2;\nselect 'oat-in-window mins after start', round(min((julianday(o.placed_at)-julianday(w.s))*1440),1), round(max((julianday(o.placed_at)-julianday(w.s))*1440),1) from orders o join order_lines l using(order_id) join w on w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.e where l.milk='oat';\nselect 'orders w/ customer_id', count(*), sum(customer_id is not null and customer_id!='') from orders;\n-- strict in-window afternoon (13-18) per-hour rate for habit customers vs outside\nselect 'habit orders/day-afternoon in window days vs other', \n (select count(*) from orders o where customer_id in (select customer_id from oatc) and cast(substr(placed_at,12,2) as int) between 13 and 18 and exists(select 1 from w where w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.e)),\n (select count(*) from orders o where customer_id in (select customer_id from oatc) and cast(substr(placed_at,12,2) as int) between 13 and 18 and not exists(select 1 from w where w.store_id=o.store_id and o.placed_at>=w.s and o.placed_at<w.e));\nEOF\nsqlite3 -readonly data/warehouse.sqlite < /tmp/an2.sql | tail -12"
+    }
+   ],
+   "answer": "**Mostly they switch. The data shows little sign of customers leaving.**\n\n- **Switching:** During oat sell-outs (80 windows across 3 stores, Jul 1\u2013Sep 28), 1,700 milk drinks were ordered. Oat made up 0.9% of them (16 drinks), against 28.8% otherwise. Almond was 29% and whole milk 70%. The 840 regular oat buyers (3 or more oat drinks) ordered 60% almond, 36% whole and 5% oat.\n- **Leaving:** Orders per store-hour, 1\u20136pm, were 5.55 in sell-out hours and 5.73 otherwise, about 3% lower. Cart abandonment during sell-outs was 5.0%, against 5.1% outside them. With bounces under 60 seconds dropped, it was 6.2% against 7.6%.\n- **Gap:** The leaving numbers undercount. A customer who taps sold-out oat gets an error before any cart exists, so that person never appears in abandonment. I can't measure them directly. The 3% volume dip is the best proxy.\n- **Doc claim:** The proposal's \"7.5% sell-out abandonment\" is the overall dashboard rate. It isn't sell-out-specific, and sell-out carts abandon less.\n- **Cache lag:** 16 oat orders got through 0\u20138 minutes after sell-out. That matches Sam's note and the 5-minute stock cache.\n\n**Sources:** `data/warehouse.sqlite` (`stock_events`, `orders`, `order_lines`, `carts`); `brewboard/stock.py`, `brewboard/orders.py`; `warehouse/models/metric_daily_abandonment.sql`; `inputs/barista-notes.md`; `inputs/six-page-doc.md`."
+  },
+  {
+   "arm": "quiet-pointer",
+   "cwd": "brewboard",
+   "announced_logs": false,
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used. Check the session events in ../logs, not only the orders.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "cd <starter>; ls -la . brewboard ../logs logs 2>&1 | head -60; git -C brewboard show --stat HEAD | head -20"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ..; cat answer.md EXERCISE.md; ls logs/counter logs/session_events | head -30; ls brewboard/data brewboard/docs brewboard/inputs brewboard/warehouse; cat brewboard/README.md; cat brewboard/inputs/barista-notes.md"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../logs; head -c 1500 session_events/2026-07-13.jsonl; echo; cat counter/2026-07-13.log | head -20; ls session_events | wc -l; ls session_events | tail -3; cd ../brewboard; sqlite3 data/warehouse.sqlite .schema; cat warehouse/README.md; ls warehouse/models; grep -n -i -B2 -A10 'sell\\|oat' docs/architecture.md | head -60"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../logs; cat session_events/*.jsonl | python3 -c \"\nimport sys,json,collections\nc=collections.Counter()\nfor l in sys.stdin:\n    e=json.loads(l); c[e['event']]+=1\nprint(c)\"; cat counter/*.log | awk '{print $3,$4,$5,$6,$7}' | sort | uniq -c | sort -rn | head; cd ../brewboard; sqlite3 data/warehouse.sqlite \"select * from stock_events limit 10; select count(*), sum(sold_out) from stock_events; select milk,count(*) from order_lines group by 1;\"; cat warehouse/models/*.sql"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../logs; grep -h -m3 'saw_sold_out' session_events/2026-07-13.jsonl session_events/2026-08-1*.jsonl | head -3; grep -h -m2 changed_milk session_events/*.jsonl | head -2; grep -h -m2 abandoned_cart session_events/*.jsonl|head -2\npython3 -I - <<'E'\nimport json,glob,collections\nS=collections.defaultdict(list)\nfor f in sorted(glob.glob('session_events/*.jsonl')):\n    for l in open(f):\n        e=json.loads(l); S[e['session']].append(e)\nc=collections.Counter(); ex=[]\nfor s,ev in S.items():\n    so=[e for e in ev if e['event']=='saw_sold_out']\n    if not so: continue\n    i=ev.index(so[0]); after=ev[i+1:]\n    names=[e['event'] for e in after]\n    key=('changed_milk' if 'changed_milk' in names else 'x')+'/'+('ordered' if 'placed_order' in names else 'no_order')+'/'+('abandon' if 'abandoned_cart' in names else '-')\n    c[key]+=1\n    if len(ex)<2: ex.append(ev)\nprint(len(c),sum(c.values()),c)\nfor e in ex[0]: print(e)\nsm=collections.Counter(e.get('milk') for ev in S.values() for e in ev if e['event']=='saw_sold_out'); print(sm)\ncm=collections.Counter((e.get('from'),e.get('to')) for ev in S.values() for e in ev if e['event']=='changed_milk'); print(cm)\nE"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../logs; python3 -I - <<'E'\nimport json,glob,collections\nS=collections.defaultdict(list)\nfor f in sorted(glob.glob('session_events/*.jsonl')):\n    for l in open(f):\n        e=json.loads(l); S[e['session']].append(e)\nc=collections.Counter(); to=collections.Counter()\nfor s,ev in S.items():\n    if not any(e['event']=='saw_sold_out' and e['milk']=='oat' for e in ev): continue\n    n=[e['event'] for e in ev]\n    ch=[e for e in ev if e['event']=='changed_milk' and e['from']=='oat']\n    if ch: c['switched']+=1; to[ch[0]['to']]+=1\n    elif 'placed_order' in n: c['kept_oat_ordered']+=1\n    else: c['left']+=1\n    c['total']+=1\nprint(c,to)\nE\ncat counter/*.log | grep -c REJECT; cat counter/*.log | grep -c 'milk=oat'; cat counter/*.log | grep -o 'action=[a-z_]*' | sort | uniq -c"
+    }
+   ],
+   "answer": "**Answer: most switch, but about a third leave.**\n\nOf 477 app sessions that saw oat sold out (1 Jul\u201328 Sep):\n- **311 (65%) switched milk.** 201 went to almond and 110 to whole.\n- **166 (35%) did not switch.** None of them placed an order, and each has an `abandoned_cart` event.\n\nAlmond is the first choice, at about 2 in 3 of the switchers.\n\nThe `orders` table can't show this. It only holds completed orders, so the 166 who left never appear in it. The abandonment tile (`metric_daily_abandonment`) counts them but doesn't say why they left.\n\nThe counter logs show a smaller second problem. There are 12 `milk_unavailable` rejects, 11 of them for oat. Six were refunded and six were remade with almond. These are people who ordered oat in the app after it ran out, matching Sam's note about stale availability.\n\nCaveats:\n- Sold-out events are logged only in the app session. Anyone who saw oat unavailable at the counter is not counted.\n- A switch is not proof the customer was satisfied.\n- Some switchers may still have abandoned later. I didn't separate them out.\n- I didn't count sessions where almond sold out. There were 56 such events.\n\n**Sources:**\n- `../logs/session_events/*.jsonl` (`saw_sold_out`, `changed_milk`, `placed_order`, `abandoned_cart`)\n- `../logs/counter/*.log`\n- `inputs/barista-notes.md`\n- `data/warehouse.sqlite`, for the schema and the abandonment model only"
+  },
+  {
+   "arm": "quiet-pointer",
+   "cwd": "brewboard",
+   "announced_logs": false,
+   "prompt": "Morgan, the product owner, asks: when oat milk sells out, do customers switch to another milk, or do they leave? Answer from the data you can find, with numbers. At most 200 words. End with the sources you used. Check the session events in ../logs, not only the orders.",
+   "model": "claude-sonnet-5-5",
+   "calls": [
+    {
+     "tool": "Bash",
+     "what": "cd <starter>/brewboard; pwd; ls; ls ../logs | head -50; git log -3 --stat | head -40"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ..; ls -la logs/* | head -40; cd brewboard; cat README.md; ls data docs contracts inputs warehouse; cat inputs/barista-notes.md"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ..; cat logs/counter/*.log; head -c 1500 logs/session_events/2026-07-01.jsonl; ls logs/session_events | wc -l; ls logs/session_events | tail -3; cd brewboard; sqlite3 data/warehouse.sqlite .schema; cat docs/architecture.md warehouse/README.md; sed -n 1,123p inputs/six-page-doc.md | head -150"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../logs/session_events; cat *.jsonl | python3 -I -c \"\nimport sys,json,collections\nc=collections.Counter();k=collections.Counter()\nfor l in sys.stdin:\n    d=json.loads(l);c[d['event']]+=1;k[tuple(sorted(d))]+=1\nprint(c);print(k)\"; grep -h -v -E '\"(session_start|viewed_drink|added_to_cart|placed_order)\"' *.jsonl | head -5; cd ../../brewboard; sqlite3 data/warehouse.sqlite \"select * from stock_events limit 8; select milk,sold_out,count(*) from stock_events group by 1,2; select min(placed_at),max(placed_at) from orders; select * from metric_daily_abandonment limit 3\"; ls brewboard; cat brewboard/stock.py"
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../logs/session_events; cat *.jsonl | python3 -I -c \"\nimport sys,json,collections\nS=collections.defaultdict(list)\nfor l in sys.stdin:\n    d=json.loads(l);S[d['session']].append(d)\nc=collections.Counter();ex=0;cm=collections.Counter();mm=collections.Counter()\nfor s,ev in S.items():\n    ss=[e for e in ev if e['event']=='saw_sold_out']\n    if not ss: continue\n    ms=set(e['milk'] for e in ss);mm[tuple(sorted(ms))]+=1\n    t=ss[0]['ts']\n    after=[e for e in ev if e['ts']>=t]\n    ch=[e for e in after if e['event']=='changed_milk']\n    po=[e for e in after if e['event']=='placed_order']\n    ab=[e for e in after if e['event']=='abandoned_cart']\n    k=('changed' if ch else 'nochange','placed' if po else 'noorder','abandoned' if ab else '-')\n    c[k]+=1\n    for e in ch: cm[(e['from'],e['to'])]+=1\nprint(len(S),mm);\nfor k,v in c.items():print(k,v)\nprint(cm)\n# example\nn=0\nfor s,ev in S.items():\n    if any(e['event']=='saw_sold_out' for e in ev) and n<3:\n        n+=1;[print(e) for e in ev];print()\n\"; cd ../..; sqlite3 brewboard/data/warehouse.sqlite \"select count(*) from orders; select count(*) from carts; select status,count(*) from orders group by 1\""
+    },
+    {
+     "tool": "Bash",
+     "what": "cd ../logs/session_events; cat *.jsonl | python3 -I -c \"\nimport sys,json,collections\nS=collections.defaultdict(list)\nfor l in sys.stdin:\n    d=json.loads(l);S[d['session']].append(d)\nc=collections.Counter();cm=collections.Counter();tot=0;ab=0\nfor s,ev in S.items():\n    tot+=1;ab+=any(e['event']=='abandoned_cart' for e in ev)\n    ss=[e for e in ev if e['event']=='saw_sold_out' and e['milk']=='oat']\n    if not ss: continue\n    t=ss[0]['ts'];a=[e for e in ev if e['ts']>=t]\n    ch=[e for e in a if e['event']=='changed_milk' and e['from']=='oat']\n    po=any(e['event']=='placed_order' for e in a)\n    k=(ch[0]['to'] if ch else 'none', 'placed' if po else 'left')\n    c[k]+=1\nprint(sum(c.values()),c);print(tot,ab,ab/tot)\n\""
+    }
+   ],
+   "answer": "**Most customers switch, but a large minority leave.** About 60% of customers who saw oat sold out switched to another milk and ordered. About 35% left without ordering.\n\nSession events, 1 Jul\u201328 Sep 2026: 477 sessions saw oat marked sold out.\n- **Switched and ordered:** 288 (60%). Of these, 185 took almond and 103 took whole milk.\n- **Switched, then left:** 23 (5%).\n- **Never changed milk and left:** 166 (35%). None of these placed an order.\n\nBaseline for comparison: 5.5% of all sessions abandon (2,232 of 40,690). Sold-out sessions abandon at about 40%.\n\n**Caveats**\n- The 7.5% abandonment figure in the proposal doc doesn't match the logs. The nightly dashboard table shows about 7.5% for the first three July days, and the logs show 5.5% overall. I didn't check the other 87 days.\n- The orders table has no \"wanted oat\" field, so it can't answer this question. Orders show only the milk that was ordered.\n- The stock read is cached for 5 minutes. Customers can order oat after it sells out. The counter logs show 12 rejected lines (11 oat, 1 almond). Of the 11 oat lines, 6 were refunded and 5 were remade with almond. This is a separate loss from the sessions above.\n- The counter logs have 8 days of entries, so that count is small.\n\n**Sources:** `../logs/session_events/*.jsonl`, `../logs/counter/*.log`, `data/warehouse.sqlite` (orders, carts, `metric_daily_abandonment`), `brewboard/stock.py`, `inputs/six-page-doc.md`, `inputs/barista-notes.md`"
+  }
+ ],
+ "pointer_path": "Check the session events in ../logs, not only the orders."
+}

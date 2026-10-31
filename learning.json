@@ -1,0 +1,14 @@
+{
+  "title": "Pair Prototyping",
+  "headline": "Pair prototyping and the loop",
+  "tagline": "When code gets cheap, the backlog becomes the constraint. How product and engineering fill it with good items, together, against real data.",
+  "parts": [
+    {"slug": "constraint", "title": "The constraint moves", "desc": "Cheaper code does not ship more product. It moves the bottleneck to the backlog."},
+    {"slug": "prompt", "title": "Give me the prompt", "desc": "An agent adds words to a short prompt, not information. Where new information really enters."},
+    {"slug": "lineage", "title": "An old loop", "desc": "Boehm's spiral and Cagan's product discovery: the loop is old. AI makes it cheap enough for each item."},
+    {"slug": "pair", "title": "Pair prototyping", "desc": "When oat sells out, do customers switch or leave? The engineer's agent can see what the product person's cannot."},
+    {"slug": "lock", "title": "Lock as you learn", "desc": "Each pass moves decisions from the agent to a human, the hard-to-change ones first."},
+    {"slug": "gates", "title": "Gates", "desc": "Nobody generates the next level of detail until humans agree on this one."},
+    {"slug": "payoff", "title": "It gets built", "desc": "Your brief from part 2, taken up the ladder, runs unattended."}
+  ]
+}

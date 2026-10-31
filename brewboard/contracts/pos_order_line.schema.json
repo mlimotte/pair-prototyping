@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POS order line (v3)",
+  "description": "What the point-of-sale accepts for one line of an order. Owned by the POS vendor; changes go through their release cycle.",
+  "type": "object",
+  "required": ["drink", "size", "qty", "price_cents"],
+  "properties": {
+    "drink": {"type": "string"},
+    "size": {"type": "string"},
+    "milk": {"type": ["string", "null"]},
+    "qty": {"type": "integer", "minimum": 1},
+    "price_cents": {"type": "integer"}
+  },
+  "additionalProperties": false
+}

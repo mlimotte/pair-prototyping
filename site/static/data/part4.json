@@ -1,0 +1,44 @@
+{
+ "orders_milk_share": {
+  "during": {
+   "whole": 0.705,
+   "oat": 0.008,
+   "almond": 0.288
+  },
+  "normal": {
+   "whole": 0.55,
+   "oat": 0.289,
+   "almond": 0.161
+  }
+ },
+ "orders_lines": {
+  "during": 1697,
+  "normal": 6273
+ },
+ "dashboard_rate": {
+  "other_days": 0.0772,
+  "sellout_days": 0.0706,
+  "overall": 0.0753
+ },
+ "events": {
+  "sessions_saw_oat_sold_out": 477,
+  "left": 166,
+  "almond": 201,
+  "whole": 110,
+  "share": {
+   "left": 0.348,
+   "almond": 0.421,
+   "whole": 0.231
+  },
+  "switched_then_ordered": 288,
+  "ordered": 288
+ },
+ "leavers": {
+  "total": 166,
+  "no_cart": 156,
+  "with_cart": 10,
+  "counted_by_tile": 1
+ },
+ "sellout_store_days": 80,
+ "counter_rejects": 12
+}

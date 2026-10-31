@@ -1,0 +1,120 @@
+  <h1>Give me the prompt</h1>
+  <p class="dek">An agent can turn two sentences into six pages. The six pages hold the two sentences and nothing more that anyone knows. Where does new information enter?</p>
+  <div data-warmup></div>
+
+  <p>Morgan owns ordering at Brew Board. On Monday, Morgan sends you a document: <em>Smart Milk Substitution: A Strategic Proposal</em>. It has twelve sections, four customer personas, a recommendation model, a loyalty incentive, a three-phase rollout and a table of success metrics. It ends: "We recommend approving Phase 1 to begin next sprint."</p>
+  <p>You read it. Then you ask Morgan one thing: <strong>"Can you send me the prompt?"</strong></p>
+  <p>Morgan sends it. It is two sentences:</p>
+  <blockquote><p>When oat milk sells out, customers who wanted oat either switch to another milk or leave. When the milk a customer picks is sold out, suggest a substitute.</p></blockquote>
+  <p>That is what Morgan knows. The other six pages came from the agent. This part is about why you want the two sentences, not the six pages, and about the place where real information enters a spec.</p>
+
+  <h2>PROMPT + ZERO_EFFORT = PROMPT</h2>
+  <p>Here is the claim in one line:</p>
+  <pre class="pseudo">prompt + zero_effort = prompt   -- the agent adds words, not information</pre>
+  <p>"Zero effort" means that nobody did any work between the prompt and the document. Nobody checked a number, asked a customer, read the code or made a decision. The agent wrote, and the human sent.</p>
+  <p>The claim is not that the document is wrong. Much of it is reasonable. The claim is that the document holds no more <em>information</em> than the prompt. Information here means something that reduces your doubt about what to build. A sentence that nobody decided cannot do that, however reasonable it sounds.</p>
+  <p>You can test this claim. Give the same prompt to an agent three times, and look at what changes.</p>
+
+  <div id="viz-runs"></div>
+  <p class="caption">Real runs of <code>claude -p</code>, recorded, not edited. A second <code>claude -p</code> pass labels each sentence. Green: the prompt says it. Amber: the prompt does not say it. Violet: a question.</p>
+
+  <p>The green sentences are stable. Each run says that the customer wanted oat, that oat is out, that the customer switches or leaves, and that the system suggests a substitute. These sentences come from the prompt, so they come out the same each time.</p>
+  <p>The amber sentences are not stable. Run 1 wants 60% of suggestions accepted. Run 2 wants 50%. Run 3 wants 40%. Run 1 limits suggestions to three, and run 3 limits them to two. Run 2 adds a point-of-sale view for staff, and the other runs do not. Click <strong>Invented numbers, by run</strong> to see the targets side by side.</p>
+  <p>A sentence that changes each time you ask is not information about Brew Board. It is information about the sampler. If you build to it, you build to a coin toss.</p>
+
+  <div id="viz-decisions"></div>
+
+  <div class="aside">
+    <p><strong>The labels come from an agent too.</strong> The second pass can be wrong about a sentence, and it sometimes labels a heading as from the prompt when you could argue it either way. Read the sentences yourself. The pattern does not depend on any one label: the invented sentences change between runs, and the ones from the prompt do not.</p>
+  </div>
+
+  <h2>Invented is not the same as wrong. That is the problem.</h2>
+  <p>Most of the invented detail is plausible. Some of it is wrong in ways that only Brew Board's system can show. Imagine Morgan's six-page document says three things that you, the engineer, can check:</p>
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>The document says</th><th>Where you would check</th></tr></thead>
+    <tbody>
+      <tr><td>A sold-out change "is reflected in real time in the customer app".</td><td>The code that reads stock status for the customer page.</td></tr>
+      <tr><td>"Our current cart abandonment rate is approximately 7.5%," and it uses this as the baseline for sell-out abandonment.</td><td>The definition of the dashboard metric, and what it counts.</td></tr>
+      <tr><td>"The order line will record both the requested and the substituted milk."</td><td>What the point-of-sale system accepts for an order line.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Do not check them yet. Part 4 does. For now, see the shape of the problem: the true sentences, the plausible sentences and the wrong sentences all look the same on the page. The reader cannot tell them apart. The author cannot either, because the author did not write them.</p>
+  <p>Six pages also cost the reader more than two sentences. A long spec feels like less work later: fewer questions, fewer meetings. But the questions did not go away. They hide inside sentences that sound like answers, and they come back during the build, when the cost to change is higher.</p>
+
+  <h2>"But it reminded me of edge cases"</h2>
+  <p>This is the best argument for the long version, and it is partly right. Run 1 mentions allergens. Run 3 leaves out alternatives that are also sold out. These are good things to think about.</p>
+  <p>They are good <strong>questions</strong>. They are bad <strong>answers</strong>. "Never suggest dairy to a customer who picked a plant milk" is a decision about Brew Board's menu and its customers. The agent did not know that, so it guessed. A guess written as a requirement is worse than the question, because it hides the fact that nobody decided.</p>
+  <p>So keep what is useful, and change its form. Step to <strong>With guidelines</strong> in the figure above. That run gets the same prompt, plus one rule from the style of spec templates such as spec-kit's: <em>mark each unknown as <code>[NEEDS CLARIFICATION: question]</code>, and do not guess</em>.</p>
+  <p>The output is now the prompt and a list of questions. The edge cases are still there, but as questions: How is the substitute chosen? What if every alternative is sold out? Does the suggestion account for allergens? And one more, which matters a lot at Brew Board: <strong>How is "sold out" determined?</strong></p>
+
+  <h2>Asking everything is not better</h2>
+  <p>The guided run does not guess, but it does not decide anything either. It hands back eleven questions, from "where does this happen?" to "how is sold out determined?", and leaves all of them to you. Some deserve your time. Many do not: whether to show one suggestion or three is easy to change later, and an agent can pick a sensible default.</p>
+  <p>So sort the unknowns by risk. Step to <strong>With decision rules</strong>. That run gets three rules instead of one:</p>
+  <ul>
+    <li><strong>Low risk, easy to change, or high confidence:</strong> decide, and label it <code>[DEFAULT: decision. Reason.]</code></li>
+    <li><strong>Moderate risk:</strong> recommend, and label it <code>[RECOMMEND: option. Reason. Alternative.]</code></li>
+    <li><strong>High risk, hard to reverse, or it needs the team's facts:</strong> ask, with <code>[NEEDS CLARIFICATION: question]</code>.</li>
+  </ul>
+  <p>Now the agent does part of the work, and your review follows the risk. Skim the defaults. Weigh the recommendations. Answer the questions. In this run it defaults to one suggestion at a time and logs each suggestion. It recommends a team-maintained mapping of substitutes and showing any price difference. It asks what "sold out" means and who decides which milks can replace each other.</p>
+  <p>The defaults are still the agent's guesses, so they are still not information. The difference is the label: a labeled guess with a reason costs you one glance to accept or overturn. And the labels are not complete. This run also made nine decisions <em>without</em> a label, such as "the customer can decline the suggestion" and the whole out-of-scope list (amber in the figure). Rules help. You still read.</p>
+
+  <div class="aside">
+    <p><strong>Still a lot to decide at once.</strong> Even sorted by risk, this spec asks you to settle the big picture (is a suggestion the right fix at all?) and the details (one suggestion or three) in one sitting. That is the problem the loop solves. Part 5 moves decisions from the agent to people over several passes, the hard-to-change ones first. Part 6 adds the gate: nobody generates the next level of detail until people agree on this one.</p>
+  </div>
+
+  <h2>Where information enters</h2>
+  <p>The guided outputs have the same information as the prompt. It has more <em>structure</em>: it shows the holes. New information enters only when a person fills a hole. That happens at a gate, where a human reads the questions and answers them.</p>
+  <ul>
+    <li>Morgan answers some from product knowledge. "Is this only milk, or syrups too?" Only milk, for now.</li>
+    <li>Sam answers some from the counter. "What happens at the counter today?" The barista refunds, or makes the drink with almond.</li>
+    <li>You answer some from the system. "How is sold out determined?" You read the code. The answer is not what Morgan's document says.</li>
+    <li>Some questions nobody can answer yet. "How many customers leave when oat sells out?" That one needs data. It is the subject of part 4.</li>
+  </ul>
+  <p>That is the first point in the loop where the spec knows more than the prompt. Everything before it was formatting.</p>
+  <pre class="pseudo">prompt + zero_effort      = prompt
+prompt + guidelines       = prompt + questions
+prompt + decision_rules   = prompt + labeled defaults + questions   -- guesses, but visible
+prompt + questions + gate = prompt + answers     -- information enters here</pre>
+
+  <div class="aside">
+    <p><strong>What to ask for.</strong> When someone sends you an agent-written spec, ask for the prompt. Then ask what they learned since they wrote it. Both answers are information. The rest is not, until someone checks it.</p>
+  </div>
+
+  <h2>The half-page brief</h2>
+  <p>Ask for something shorter instead. A brief holds what someone knows, and it marks what nobody knows yet. It fits on half a page:</p>
+  <pre><code class="language-markdown"># Brief: &lt;one line&gt;
+
+## What we see
+What happens today, with its source. No solution yet.
+
+## Who it affects
+The people, and where they meet the problem.
+
+## Evidence
+Each fact with its source (feedback, a log, a query). Numbers only with a source.
+
+## What we do not know
+The open questions, each one answerable.
+
+## Out of scope
+What this item does not cover.
+
+## How we will know
+What we will measure, and roughly what change would matter.</code></pre>
+  <p>Look at what is not in it: no personas, no solution design, no rollout phases, no targets that nobody set. Those come later, after the gate, from people who know. A brief that says "we do not know" five times is a good brief, because it is honest about where the work is. (Your tracker's tickets may already have part of this shape: a user story with acceptance criteria covers the first two sections. The sections that are usually missing are the evidence and the unknowns.)</p>
+  <p>This brief is also the start of something. You write one in the exercise below. Keep it: in part 7, it goes up the ladder and becomes a real change to Brew Board.</p>
+
+  <div class="build-it">
+    <p>In a clone of the series repo, make the starter: <code>python starters/make_starter.py 02 ~/backlog/part02</code>. Open <code>EXERCISE.md</code>.</p>
+    <p>Cut Morgan's six-page document (<code>brewboard/inputs/six-page-doc.md</code>) to a half-page brief in <code>answer.md</code>. Use the other inputs (customer feedback, Sam's notes) for evidence. Then grade it: <code>cd grade &amp;&amp; claude "/grade"</code>. The grader checks each rubric item and quotes the line in your brief that meets it. Then it shows a reference brief.</p>
+  </div>
+
+  <h2>Try it with your own prompt</h2>
+  <p>With the local server running, the figure below calls your own Claude Code: <code>claude -p</code> in an empty folder, with no tools, and without your settings, <code>CLAUDE.md</code> files, memory or skills. Only the prompt and the rules shown reach the model, as in the recorded runs. Change the prompt. Run it twice and compare the amber sentences. Then run it with guidelines, and with decision rules.</p>
+  <div id="viz-live"></div>
+
+  <div data-wild></div>
+
+  <div class="takeaway">
+    <p>An agent turns a prompt into a document at almost no cost. What it adds is invented detail, and invented detail changes from run to run, so it carries no information. Generic edge cases are useful as questions, not as answers: ask the agent to mark unknowns instead of guessing. New information enters at the gate, when a human answers those questions from product knowledge, from the counter or from the system.</p>
+  </div>

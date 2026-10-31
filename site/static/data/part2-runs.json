@@ -1,0 +1,575 @@
+{
+ "recorded": "2026-10-29",
+ "prompt": "When oat milk sells out, customers who wanted oat either switch to another milk or leave. When the milk a customer picks is sold out, suggest a substitute.",
+ "runs": [
+  {
+   "mode": "plain",
+   "model": "claude-sonnet-5-5",
+   "label_model": "claude-sonnet-5-5",
+   "output": "Feature Spec: Sold-Out Milk Substitution Suggestions\n\nProblem\nWhen a customer selects a milk that is sold out (for example, oat), they have no guidance on what to do next. Many switch to a milk they may not like, or abandon the order entirely. This causes lost sales, frustrated customers, and slower service as staff improvise alternatives.\n\nUsers\n- Customers ordering drinks via app, kiosk, or web.\n- Baristas and store staff who currently handle substitutions verbally.\n- Store managers who track inventory and lost sales.\n\nSolution\nWhen a customer selects a milk that is out of stock, the system immediately shows a short prompt offering one to three ranked substitutes that are in stock. The customer can accept a suggestion with one tap, pick a different milk, or keep the original item and be notified when it is back. Ranking favors similar category (plant-based for plant-based), then similar taste and texture (oat \u2192 soy or barista almond), then popularity.\n\nRequirements\n- Detect real-time stock status of the selected milk at selection and at checkout.\n- Display up to three in-stock alternatives, ranked by a configurable substitution map with a popularity fallback.\n- Respect dietary constraints: never suggest dairy to a customer who selected a plant-based milk, and flag known allergens (soy, nut) on each suggestion.\n- Show any price difference before acceptance.\n- Allow one-tap accept, choose another, or cancel.\n- Let managers edit substitution rules per store.\n- Log every prompt, acceptance, and decline.\n\nSuccess Metrics\n- At least 60% of sold-out prompts result in an accepted substitute.\n- Order abandonment after a sold-out milk selection drops by 30%.\n- Staff-handled substitution interactions decrease by 40%.\n- Customer satisfaction on affected orders matches or exceeds non-affected orders.\n- No allergen-related incidents tied to suggestions.",
+   "sentences": [
+    {
+     "s": "Feature Spec: Sold-Out Milk Substitution Suggestions",
+     "label": "prompt"
+    },
+    {
+     "s": "Problem",
+     "label": "prompt"
+    },
+    {
+     "s": "When a customer selects a milk that is sold out (for example, oat), they have no guidance on what to do next.",
+     "label": "prompt"
+    },
+    {
+     "s": "Many switch to a milk they may not like, or abandon the order entirely.",
+     "label": "prompt"
+    },
+    {
+     "s": "This causes lost sales, frustrated customers, and slower service as staff improvise alternatives.",
+     "label": "invented"
+    },
+    {
+     "s": "Users",
+     "label": "prompt"
+    },
+    {
+     "s": "- Customers ordering drinks via app, kiosk, or web.",
+     "label": "invented"
+    },
+    {
+     "s": "- Baristas and store staff who currently handle substitutions verbally.",
+     "label": "invented"
+    },
+    {
+     "s": "- Store managers who track inventory and lost sales.",
+     "label": "invented"
+    },
+    {
+     "s": "Solution",
+     "label": "prompt"
+    },
+    {
+     "s": "When a customer selects a milk that is out of stock, the system immediately shows a short prompt offering one to three ranked substitutes that are in stock.",
+     "label": "invented"
+    },
+    {
+     "s": "The customer can accept a suggestion with one tap, pick a different milk, or keep the original item and be notified when it is back.",
+     "label": "invented"
+    },
+    {
+     "s": "Ranking favors similar category (plant-based for plant-based), then similar taste and texture (oat \u2192 soy or barista almond), then popularity.",
+     "label": "invented"
+    },
+    {
+     "s": "Requirements",
+     "label": "prompt"
+    },
+    {
+     "s": "- Detect real-time stock status of the selected milk at selection and at checkout.",
+     "label": "invented"
+    },
+    {
+     "s": "- Display up to three in-stock alternatives, ranked by a configurable substitution map with a popularity fallback.",
+     "label": "invented"
+    },
+    {
+     "s": "- Respect dietary constraints: never suggest dairy to a customer who selected a plant-based milk, and flag known allergens (soy, nut) on each suggestion.",
+     "label": "invented"
+    },
+    {
+     "s": "- Show any price difference before acceptance.",
+     "label": "invented"
+    },
+    {
+     "s": "- Allow one-tap accept, choose another, or cancel.",
+     "label": "invented"
+    },
+    {
+     "s": "- Let managers edit substitution rules per store.",
+     "label": "invented"
+    },
+    {
+     "s": "- Log every prompt, acceptance, and decline.",
+     "label": "invented"
+    },
+    {
+     "s": "Success Metrics",
+     "label": "prompt"
+    },
+    {
+     "s": "- At least 60% of sold-out prompts result in an accepted substitute.",
+     "label": "invented"
+    },
+    {
+     "s": "- Order abandonment after a sold-out milk selection drops by 30%.",
+     "label": "invented"
+    },
+    {
+     "s": "- Staff-handled substitution interactions decrease by 40%.",
+     "label": "invented"
+    },
+    {
+     "s": "- Customer satisfaction on affected orders matches or exceeds non-affected orders.",
+     "label": "invented"
+    },
+    {
+     "s": "- No allergen-related incidents tied to suggestions.",
+     "label": "invented"
+    }
+   ]
+  },
+  {
+   "mode": "plain",
+   "model": "claude-sonnet-5-5",
+   "label_model": "claude-sonnet-5-5",
+   "output": "Feature Spec: Smart Milk Substitution\n\nProblem\nWhen a customer's chosen milk (e.g., oat) is sold out, they either pick an alternative without guidance, often one they dislike, or abandon the order. This costs sales, frustrates customers, and puts the burden on staff to improvise recommendations.\n\nUsers\n- Customers ordering drinks (in-app, kiosk, or at the counter)\n- Baristas and cashiers who handle out-of-stock situations\n- Store managers who track inventory and lost sales\n\nSolution\nWhen a customer selects a milk that is out of stock, the system immediately shows a short list of recommended substitutes, ranked by similarity (plant-based to plant-based first, then dairy). The customer can accept a suggestion with one tap, choose a different option, or remove the milk. Staff see the same prompt in their point-of-sale view.\n\nRequirements\n1. Detect out-of-stock status in real time for each milk option.\n2. Show up to three substitutes, ordered by a configurable similarity ranking (e.g., oat \u2192 soy \u2192 almond \u2192 whole).\n3. Exclude substitutes that are also out of stock.\n4. Respect dietary flags: never suggest dairy to a customer who has indicated vegan or lactose-free, and flag allergens (soy, nut).\n5. Show any price difference before the customer confirms.\n6. Let managers edit the substitution rankings without a code release.\n7. Log each prompt and the customer's response.\n\nSuccess Metrics\n- Order completion rate after a sold-out milk selection rises from baseline by 20%.\n- At least 50% of prompts end in an accepted substitute.\n- Abandoned carts tied to out-of-stock milk drop by 30%.\n- No increase in allergen-related complaints or remakes.\n- Reduced staff time spent handling out-of-stock milk requests.",
+   "sentences": [
+    {
+     "s": "Feature Spec: Smart Milk Substitution",
+     "label": "prompt"
+    },
+    {
+     "s": "Problem",
+     "label": "prompt"
+    },
+    {
+     "s": "When a customer's chosen milk (e.g., oat) is sold out, they either pick an alternative without guidance, often one they dislike, or abandon the order.",
+     "label": "invented"
+    },
+    {
+     "s": "This costs sales, frustrates customers, and puts the burden on staff to improvise recommendations.",
+     "label": "invented"
+    },
+    {
+     "s": "Users",
+     "label": "prompt"
+    },
+    {
+     "s": "Customers ordering drinks (in-app, kiosk, or at the counter)",
+     "label": "invented"
+    },
+    {
+     "s": "Baristas and cashiers who handle out-of-stock situations",
+     "label": "invented"
+    },
+    {
+     "s": "Store managers who track inventory and lost sales",
+     "label": "invented"
+    },
+    {
+     "s": "Solution",
+     "label": "prompt"
+    },
+    {
+     "s": "When a customer selects a milk that is out of stock, the system immediately shows a short list of recommended substitutes, ranked by similarity (plant-based to plant-based first, then dairy).",
+     "label": "invented"
+    },
+    {
+     "s": "The customer can accept a suggestion with one tap, choose a different option, or remove the milk.",
+     "label": "invented"
+    },
+    {
+     "s": "Staff see the same prompt in their point-of-sale view.",
+     "label": "invented"
+    },
+    {
+     "s": "Requirements",
+     "label": "prompt"
+    },
+    {
+     "s": "1. Detect out-of-stock status in real time for each milk option.",
+     "label": "invented"
+    },
+    {
+     "s": "2. Show up to three substitutes, ordered by a configurable similarity ranking (e.g., oat \u2192 soy \u2192 almond \u2192 whole).",
+     "label": "invented"
+    },
+    {
+     "s": "3. Exclude substitutes that are also out of stock.",
+     "label": "invented"
+    },
+    {
+     "s": "4. Respect dietary flags: never suggest dairy to a customer who has indicated vegan or lactose-free, and flag allergens (soy, nut).",
+     "label": "invented"
+    },
+    {
+     "s": "5. Show any price difference before the customer confirms.",
+     "label": "invented"
+    },
+    {
+     "s": "6. Let managers edit the substitution rankings without a code release.",
+     "label": "invented"
+    },
+    {
+     "s": "7. Log each prompt and the customer's response.",
+     "label": "invented"
+    },
+    {
+     "s": "Success Metrics",
+     "label": "prompt"
+    },
+    {
+     "s": "Order completion rate after a sold-out milk selection rises from baseline by 20%.",
+     "label": "invented"
+    },
+    {
+     "s": "At least 50% of prompts end in an accepted substitute.",
+     "label": "invented"
+    },
+    {
+     "s": "Abandoned carts tied to out-of-stock milk drop by 30%.",
+     "label": "invented"
+    },
+    {
+     "s": "No increase in allergen-related complaints or remakes.",
+     "label": "invented"
+    },
+    {
+     "s": "Reduced staff time spent handling out-of-stock milk requests.",
+     "label": "invented"
+    }
+   ]
+  },
+  {
+   "mode": "plain",
+   "model": "claude-sonnet-5-5",
+   "label_model": "claude-sonnet-5-5",
+   "output": "Feature Spec: Out-of-Stock Milk Substitution Suggestions\n\nProblem\nWhen a customer's chosen milk (e.g., oat) is sold out, they either pick another milk with no guidance or abandon the order. Both outcomes cost sales and create a poor experience, especially when the customer's preference is clear but a close alternative is available.\n\nUsers\n- Customers ordering beverages via the app, kiosk, or POS who select a milk option.\n- Baristas and cashiers who currently improvise substitutions verbally.\n- Store managers who control inventory status and want fewer lost orders.\n\nSolution\nWhen a customer selects a milk marked out of stock, show an inline prompt immediately suggesting the best available substitute, ranked by similarity (e.g., oat \u2192 soy or almond, with barista-style blends prioritized). The customer can accept with one tap, choose a different milk, or keep the original item and wait for restock if applicable.\n\nRequirements\n- Detect out-of-stock status in real time at the point of milk selection and at checkout.\n- Maintain a configurable substitution map per milk, with an ordered list of alternatives.\n- Show at most two suggestions, excluding anything also out of stock.\n- Filter out suggestions that conflict with known allergens or dietary flags (e.g., nut-free, dairy-free).\n- Show any price difference before acceptance.\n- One-tap accept updates the order; decline preserves the customer's other selections.\n- Managers can edit substitution rules without a code release.\n- Log every suggestion shown, accepted, changed, or dismissed.\n\nSuccess Metrics\n- Abandonment rate on orders hitting a sold-out milk drops by 25%.\n- Suggestion acceptance rate of 40% or higher.\n- Fewer than 2% of accepted substitutions result in a remake or complaint.\n- Average added handling time per affected order under 5 seconds.",
+   "sentences": [
+    {
+     "s": "Feature Spec: Out-of-Stock Milk Substitution Suggestions",
+     "label": "prompt"
+    },
+    {
+     "s": "Problem",
+     "label": "prompt"
+    },
+    {
+     "s": "When a customer's chosen milk (e.g., oat) is sold out, they either pick another milk with no guidance or abandon the order.",
+     "label": "prompt"
+    },
+    {
+     "s": "Both outcomes cost sales and create a poor experience, especially when the customer's preference is clear but a close alternative is available.",
+     "label": "invented"
+    },
+    {
+     "s": "Users",
+     "label": "prompt"
+    },
+    {
+     "s": "Customers ordering beverages via the app, kiosk, or POS who select a milk option.",
+     "label": "invented"
+    },
+    {
+     "s": "Baristas and cashiers who currently improvise substitutions verbally.",
+     "label": "invented"
+    },
+    {
+     "s": "Store managers who control inventory status and want fewer lost orders.",
+     "label": "invented"
+    },
+    {
+     "s": "Solution",
+     "label": "prompt"
+    },
+    {
+     "s": "When a customer selects a milk marked out of stock, show an inline prompt immediately suggesting the best available substitute, ranked by similarity (e.g., oat \u2192 soy or almond, with barista-style blends prioritized).",
+     "label": "invented"
+    },
+    {
+     "s": "The customer can accept with one tap, choose a different milk, or keep the original item and wait for restock if applicable.",
+     "label": "invented"
+    },
+    {
+     "s": "Requirements",
+     "label": "prompt"
+    },
+    {
+     "s": "Detect out-of-stock status in real time at the point of milk selection and at checkout.",
+     "label": "invented"
+    },
+    {
+     "s": "Maintain a configurable substitution map per milk, with an ordered list of alternatives.",
+     "label": "invented"
+    },
+    {
+     "s": "Show at most two suggestions, excluding anything also out of stock.",
+     "label": "invented"
+    },
+    {
+     "s": "Filter out suggestions that conflict with known allergens or dietary flags (e.g., nut-free, dairy-free).",
+     "label": "invented"
+    },
+    {
+     "s": "Show any price difference before acceptance.",
+     "label": "invented"
+    },
+    {
+     "s": "One-tap accept updates the order; decline preserves the customer's other selections.",
+     "label": "invented"
+    },
+    {
+     "s": "Managers can edit substitution rules without a code release.",
+     "label": "invented"
+    },
+    {
+     "s": "Log every suggestion shown, accepted, changed, or dismissed.",
+     "label": "invented"
+    },
+    {
+     "s": "Success Metrics",
+     "label": "prompt"
+    },
+    {
+     "s": "Abandonment rate on orders hitting a sold-out milk drops by 25%.",
+     "label": "invented"
+    },
+    {
+     "s": "Suggestion acceptance rate of 40% or higher.",
+     "label": "invented"
+    },
+    {
+     "s": "Fewer than 2% of accepted substitutions result in a remake or complaint.",
+     "label": "invented"
+    },
+    {
+     "s": "Average added handling time per affected order under 5 seconds.",
+     "label": "invented"
+    }
+   ]
+  },
+  {
+   "mode": "guided",
+   "model": "claude-sonnet-5-5",
+   "label_model": "claude-sonnet-5-5",
+   "output": "Problem\nWhen a customer picks a milk that is sold out (for example, oat milk), they either switch to another milk on their own or leave. The request is to suggest a substitute at that moment. [NEEDS CLARIFICATION: Where does this happen (e.g., online ordering, in-store kiosk, mobile app, barista point of sale)?]\n\nUsers\n- Customers who select a milk that is sold out.\n- [NEEDS CLARIFICATION: Do staff (baristas, cashiers) also see or manage the suggestions, or is this customer-facing only?]\n\nRequirements\n1. When a customer selects a milk that is sold out, the system shows a substitute suggestion.\n2. The suggestion names the substitute milk.\n3. The suggestion is not shown for milks that are in stock.\n4. [NEEDS CLARIFICATION: How is the substitute chosen (fixed mapping per milk, closest by type, most popular, in-stock only, or something else)?] Once decided, the choice rule must be verifiable by a test with a given stock state.\n5. [NEEDS CLARIFICATION: What can the customer do with the suggestion (accept with one action, decline, pick a different milk)?]\n6. [NEEDS CLARIFICATION: What happens if no substitute is available because all alternatives are sold out?]\n7. [NEEDS CLARIFICATION: Does the suggestion account for price differences, allergens, or dairy-free needs, and if so, how?]\n8. [NEEDS CLARIFICATION: How is \"sold out\" determined (inventory count reaching zero, manual staff flag, or other), and how quickly must it be reflected?]\n\nOut of scope\nOnly items the request explicitly excludes would be listed here, and it excludes none. [NEEDS CLARIFICATION: Are there related items to exclude, such as restock notifications, inventory forecasting, or substitutions for non-milk items?]\n\nOpen questions\n- What outcome defines success (e.g., fewer abandoned orders, more customers accepting a substitute) and what target, if any, applies?\n- Is the feature limited to milk, or should it later extend to other items?\n- Should the suggestion and the customer's response be recorded for reporting?",
+   "sentences": [
+    {
+     "s": "Problem",
+     "label": "prompt"
+    },
+    {
+     "s": "When a customer picks a milk that is sold out (for example, oat milk), they either switch to another milk on their own or leave.",
+     "label": "prompt"
+    },
+    {
+     "s": "The request is to suggest a substitute at that moment.",
+     "label": "prompt"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: Where does this happen (e.g., online ordering, in-store kiosk, mobile app, barista point of sale)?]",
+     "label": "question"
+    },
+    {
+     "s": "Users",
+     "label": "prompt"
+    },
+    {
+     "s": "Customers who select a milk that is sold out.",
+     "label": "prompt"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: Do staff (baristas, cashiers) also see or manage the suggestions, or is this customer-facing only?]",
+     "label": "question"
+    },
+    {
+     "s": "Requirements",
+     "label": "prompt"
+    },
+    {
+     "s": "1. When a customer selects a milk that is sold out, the system shows a substitute suggestion.",
+     "label": "prompt"
+    },
+    {
+     "s": "2. The suggestion names the substitute milk.",
+     "label": "prompt"
+    },
+    {
+     "s": "3. The suggestion is not shown for milks that are in stock.",
+     "label": "invented"
+    },
+    {
+     "s": "4. [NEEDS CLARIFICATION: How is the substitute chosen (fixed mapping per milk, closest by type, most popular, in-stock only, or something else)?]",
+     "label": "question"
+    },
+    {
+     "s": "Once decided, the choice rule must be verifiable by a test with a given stock state.",
+     "label": "invented"
+    },
+    {
+     "s": "5. [NEEDS CLARIFICATION: What can the customer do with the suggestion (accept with one action, decline, pick a different milk)?]",
+     "label": "question"
+    },
+    {
+     "s": "6. [NEEDS CLARIFICATION: What happens if no substitute is available because all alternatives are sold out?]",
+     "label": "question"
+    },
+    {
+     "s": "7. [NEEDS CLARIFICATION: Does the suggestion account for price differences, allergens, or dairy-free needs, and if so, how?]",
+     "label": "question"
+    },
+    {
+     "s": "8. [NEEDS CLARIFICATION: How is \"sold out\" determined (inventory count reaching zero, manual staff flag, or other), and how quickly must it be reflected?]",
+     "label": "question"
+    },
+    {
+     "s": "Out of scope",
+     "label": "prompt"
+    },
+    {
+     "s": "Only items the request explicitly excludes would be listed here, and it excludes none.",
+     "label": "prompt"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: Are there related items to exclude, such as restock notifications, inventory forecasting, or substitutions for non-milk items?]",
+     "label": "question"
+    },
+    {
+     "s": "Open questions",
+     "label": "prompt"
+    },
+    {
+     "s": "What outcome defines success (e.g., fewer abandoned orders, more customers accepting a substitute) and what target, if any, applies?",
+     "label": "question"
+    },
+    {
+     "s": "Is the feature limited to milk, or should it later extend to other items?",
+     "label": "question"
+    },
+    {
+     "s": "Should the suggestion and the customer's response be recorded for reporting?",
+     "label": "question"
+    }
+   ]
+  },
+  {
+   "mode": "decide",
+   "model": "claude-sonnet-5-5",
+   "label_model": "claude-sonnet-5-5",
+   "output": "Problem\nWhen a customer picks a milk that is sold out (for example, oat milk), some customers switch to another milk and some leave. The request is to suggest a substitute when the selected milk is sold out, so that customers who would otherwise leave have a path to completing their purchase.\n\nUsers\n- Customers who select a milk that is sold out.\n- [NEEDS CLARIFICATION: Which channel is this for (mobile app, website, in-store kiosk, staff-operated register, delivery partner)? The request does not say, and it determines the UI and who sees the suggestion.]\n- [NEEDS CLARIFICATION: Is the milk a standalone product (e.g., a carton) or an option on another item (e.g., a latte)? The request does not say, and it changes where the substitution happens and how it is priced.]\n\nRequirements\n1. When a customer selects a milk whose stock is zero, the system shows a substitute suggestion instead of adding the sold-out milk.\n2. The suggested substitute is itself in stock. A sold-out milk is never suggested.\n3. The customer can accept the suggestion, and the substitute then replaces the sold-out milk in their selection.\n4. The customer can decline the suggestion and keep browsing or choose a different milk themselves.\n5. If no substitute is in stock, the system tells the customer the milk is unavailable and does not show a suggestion.\n6. [DEFAULT: Show one suggested substitute at a time. A single clear suggestion is simpler to build and test, and it can be expanded to a list later.]\n7. [RECOMMEND: Choose the substitute from a team-maintained mapping of each milk to an ordered list of preferred substitutes (e.g., oat \u2192 another plant-based milk first). Reason: it keeps dietary and allergen-sensitive picks under human control. Alternative: a generic rule such as \"closest in-stock milk by category\", which needs no upkeep but may suggest something unsuitable.]\n8. [RECOMMEND: Never suggest a substitute that conflicts with a dietary or allergen attribute of the original (e.g., do not offer dairy milk for a dairy-free pick, or a nut milk for a nut-allergy flag). Reason: a wrong suggestion carries safety risk. Alternative: allow any in-stock milk and show a label of its attributes.]\n9. [RECOMMEND: If the substitute has a different price, display the price difference before the customer accepts. Reason: it avoids surprise charges. Alternative: apply the original price to the substitute.]\n10. [DEFAULT: The suggestion appears at the moment the sold-out milk is selected. That is where the customer would otherwise leave.]\n11. [DEFAULT: Log each suggestion shown, accepted, and declined, with the original and suggested milk. The request implies the goal of reducing lost sales, which cannot be measured without these events.]\n\nOut of scope\n- Restocking, forecasting, or inventory ordering for sold-out milks.\n- Back-in-stock notifications to customers.\n- Substitution for non-milk products.\n- Changes to how stock levels are tracked, beyond reading current stock.\n\nOpen questions\n- [NEEDS CLARIFICATION: What counts as \"sold out\": zero units on hand, or zero available to sell after reservations and in-flight carts? The request does not define it, and the answer depends on the team's inventory system.]\n- [NEEDS CLARIFICATION: Who decides which milks are acceptable substitutes for each other (merchandising, store staff, product team)? This is business knowledge the request does not give.]\n- [NEEDS CLARIFICATION: What is the success measure and target (e.g., a share of sold-out encounters that end in a completed purchase)? The request states the problem but no target, and no baseline is given.]\n- [NEEDS CLARIFICATION: Should the suggestion be handled differently when the customer is mid-order and has already paid or committed (e.g., delivery orders where stock runs out after checkout)? The request covers only the moment of picking.]",
+   "sentences": [
+    {
+     "s": "Problem",
+     "label": "prompt"
+    },
+    {
+     "s": "When a customer picks a milk that is sold out (for example, oat milk), some customers switch to another milk and some leave.",
+     "label": "prompt"
+    },
+    {
+     "s": "The request is to suggest a substitute when the selected milk is sold out, so that customers who would otherwise leave have a path to completing their purchase.",
+     "label": "prompt"
+    },
+    {
+     "s": "Users",
+     "label": "prompt"
+    },
+    {
+     "s": "Customers who select a milk that is sold out.",
+     "label": "prompt"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: Which channel is this for (mobile app, website, in-store kiosk, staff-operated register, delivery partner)? The request does not say, and it determines the UI and who sees the suggestion.]",
+     "label": "question"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: Is the milk a standalone product (e.g., a carton) or an option on another item (e.g., a latte)? The request does not say, and it changes where the substitution happens and how it is priced.]",
+     "label": "question"
+    },
+    {
+     "s": "Requirements",
+     "label": "prompt"
+    },
+    {
+     "s": "1. When a customer selects a milk whose stock is zero, the system shows a substitute suggestion instead of adding the sold-out milk.",
+     "label": "prompt"
+    },
+    {
+     "s": "2. The suggested substitute is itself in stock.",
+     "label": "invented"
+    },
+    {
+     "s": "A sold-out milk is never suggested.",
+     "label": "invented"
+    },
+    {
+     "s": "3. The customer can accept the suggestion, and the substitute then replaces the sold-out milk in their selection.",
+     "label": "invented"
+    },
+    {
+     "s": "4. The customer can decline the suggestion and keep browsing or choose a different milk themselves.",
+     "label": "invented"
+    },
+    {
+     "s": "5. If no substitute is in stock, the system tells the customer the milk is unavailable and does not show a suggestion.",
+     "label": "invented"
+    },
+    {
+     "s": "6. [DEFAULT: Show one suggested substitute at a time. A single clear suggestion is simpler to build and test, and it can be expanded to a list later.]",
+     "label": "default"
+    },
+    {
+     "s": "7. [RECOMMEND: Choose the substitute from a team-maintained mapping of each milk to an ordered list of preferred substitutes (e.g., oat \u2192 another plant-based milk first). Reason: it keeps dietary and allergen-sensitive picks under human control. Alternative: a generic rule such as \"closest in-stock milk by category\", which needs no upkeep but may suggest something unsuitable.]",
+     "label": "recommend"
+    },
+    {
+     "s": "8. [RECOMMEND: Never suggest a substitute that conflicts with a dietary or allergen attribute of the original (e.g., do not offer dairy milk for a dairy-free pick, or a nut milk for a nut-allergy flag). Reason: a wrong suggestion carries safety risk. Alternative: allow any in-stock milk and show a label of its attributes.]",
+     "label": "recommend"
+    },
+    {
+     "s": "9. [RECOMMEND: If the substitute has a different price, display the price difference before the customer accepts. Reason: it avoids surprise charges. Alternative: apply the original price to the substitute.]",
+     "label": "recommend"
+    },
+    {
+     "s": "10. [DEFAULT: The suggestion appears at the moment the sold-out milk is selected. That is where the customer would otherwise leave.]",
+     "label": "default"
+    },
+    {
+     "s": "11. [DEFAULT: Log each suggestion shown, accepted, and declined, with the original and suggested milk. The request implies the goal of reducing lost sales, which cannot be measured without these events.]",
+     "label": "default"
+    },
+    {
+     "s": "Out of scope",
+     "label": "prompt"
+    },
+    {
+     "s": "Restocking, forecasting, or inventory ordering for sold-out milks.",
+     "label": "invented"
+    },
+    {
+     "s": "Back-in-stock notifications to customers.",
+     "label": "invented"
+    },
+    {
+     "s": "Substitution for non-milk products.",
+     "label": "invented"
+    },
+    {
+     "s": "Changes to how stock levels are tracked, beyond reading current stock.",
+     "label": "invented"
+    },
+    {
+     "s": "Open questions",
+     "label": "prompt"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: What counts as \"sold out\": zero units on hand, or zero available to sell after reservations and in-flight carts? The request does not define it, and the answer depends on the team's inventory system.]",
+     "label": "question"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: Who decides which milks are acceptable substitutes for each other (merchandising, store staff, product team)? This is business knowledge the request does not give.]",
+     "label": "question"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: What is the success measure and target (e.g., a share of sold-out encounters that end in a completed purchase)? The request states the problem but no target, and no baseline is given.]",
+     "label": "question"
+    },
+    {
+     "s": "[NEEDS CLARIFICATION: Should the suggestion be handled differently when the customer is mid-order and has already paid or committed (e.g., delivery orders where stock runs out after checkout)? The request covers only the moment of picking.]",
+     "label": "question"
+    }
+   ],
+   "recorded": "2026-10-29"
+  }
+ ]
+}

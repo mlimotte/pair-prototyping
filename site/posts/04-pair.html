@@ -1,0 +1,84 @@
+  <h1>Pair prototyping</h1>
+  <p class="dek">Morgan asks a simple question: when oat sells out, do customers switch or leave? Morgan's agent answers it with confidence, and it is wrong. Yours is wrong too, until you add one sentence.</p>
+  <div data-warmup></div>
+
+  <p>Part 2 ended with a brief and a list of open questions. One question needs data: <strong>when oat sells out, do customers switch to another milk, or do they leave?</strong></p>
+  <p>The answer decides whether the feature is worth building. If almost everyone switches, a substitute suggestion saves a few seconds. If many leave, it might win back real sales. Morgan can ask an agent. So can you. This part compares the answers, and it shows why the engineer belongs in the loop before anything is built.</p>
+  <p>Before you look, make a guess.</p>
+
+  <div id="viz-views"></div>
+
+  <h2>The orders table holds only the people who stayed</h2>
+  <p>Start with <strong>Orders table</strong>. On days when oat sells out, oat lines fall to almost nothing, and almond and whole rise to fill the gap. Read alone, this says that oat customers switch.</p>
+  <p>But a customer who leaves places no order. The orders table cannot show what is not in it. Its picture of a sell-out is the picture of the survivors. Total orders fall a little in sell-out hours, about 4%, and that dip is the only trace of the people who left. It is small enough to look like noise.</p>
+  <p>This is not a data-quality problem. The table is correct. It answers "what did people order?", and Morgan asked a different question.</p>
+
+  <h2>The dashboard was built for another question</h2>
+  <p>Now step to <strong>Dashboard tile</strong>. Brew Board's ops dashboard has an abandonment rate. On days when oat sells out, that rate is <em>lower</em> than on other days. A product person who checks the dashboard concludes that sell-outs do not cost sales. The six-page document from part 2 used this tile as its baseline.</p>
+  <p>Two facts hide the leavers from the tile, and neither is on the dashboard:</p>
+  <ul>
+    <li>The tile counts <strong>carts</strong>. Most customers who leave at a sell-out leave before they add anything, so they never have a cart.</li>
+    <li>The model behind the tile drops carts open for less than 60 seconds, with the comment <code>-- drop bounces</code>. A customer who sees "sold out" and leaves is fast. To the model, that customer is a bounce.</li>
+  </ul>
+  <p>The tile counts 1 of the 166 people who left. Both facts are in the code: one in the app's cart logic, one in the SQL that defines the metric. The dashboard shows a number. Only the transformation code shows what the number means.</p>
+
+  <h2>The session events are not in the warehouse</h2>
+  <p>Step to <strong>Session events</strong>. The customer page writes an event for each step: <code>viewed_drink</code>, <code>saw_sold_out</code>, <code>changed_milk</code>, <code>abandoned_cart</code>. With these events, the question is a count. Of the 477 sessions that saw oat sold out, 166 left: <strong>35%</strong>.</p>
+  <p>These events are app logs. They go to log storage with the other logs, and the nightly load does not copy them into the warehouse. Nobody hid them. Nobody needed them in the warehouse, until now.</p>
+
+  <div class="aside">
+    <p><strong>The data is generated.</strong> Brew Board is fictional, and its 90 days of data come from a generator with a planted truth: when oat sells out, 35% of the customers who wanted it leave. The planted truth lets the grader check your answer. The mechanisms that hide it (survivors in the orders table, a metric definition, logs outside the warehouse) are common in real systems.</p>
+  </div>
+
+  <h2>Three agents, one question</h2>
+  <p>Now give the question to an agent, the way Morgan would and the way you would. Each setup ran twice, with the same model and the same question. The only differences are the folder the agent works in and, in the third setup, one sentence.</p>
+
+  <div id="viz-agents"></div>
+
+  <p><strong>Morgan's agent</strong> gets what a product person's agent usually gets: the warehouse copy, the inputs and the docs. It does careful work. It finds the sell-out windows, compares the milk mix, measures the dip in order volume, and reports an upper bound of about 4%. Its method is sound. Its data cannot answer the question.</p>
+  <p><strong>Your agent</strong> works in the repo. It reads the code and the warehouse model. In one run it even notices that a customer who taps sold-out oat never gets a cart, so the warehouse cannot count that customer. But it does not know that the session events exist, and it reports "little sign of customers leaving".</p>
+  <p><strong>Your agent with one sentence</strong> has the same folder, the same tools and the same access. The sentence is: <em>"Check the session events in ../logs, not only the orders."</em> Both runs report that about a third leave. Both also find the counter rejections, and one run traces them to a 5-minute cache on stock status. Part 5 returns to that.</p>
+
+  <h2>It is not only access</h2>
+  <p>The second and third setups have the same access. The logs are readable from the repo in both. The difference is that the engineer knows that the logs exist, that they are relevant, and where they are. An agent cannot search for what nobody told it to look for. It does not know that the answer is missing from the warehouse, because nothing in the warehouse says so.</p>
+  <div class="aside">
+    <p><strong>Telling the agent where the data is counts as a pointer.</strong> We also ran the question with the logs folder given to Claude Code as an extra working directory (<code>--add-dir ../logs</code>). Then the agent found the session events without the sentence, in both runs, and answered correctly. That is the same lesson. Someone had to know that the logs mattered and put them in front of the agent. That someone was the engineer.</p>
+  </div>
+
+  <h2>"But I can get that from our BI tool"</h2>
+  <p>BI answers the questions that someone already modeled. Discovery asks new ones. The warehouse was built for past questions, so a new question often needs data that was never loaded, or knowledge that is not data at all. Agents should still use the governed BI views for the numbers people will quote. The engineer covers what BI never modeled. Each row below points at something in Brew Board that you saw in this part or can find in the starter repo.</p>
+  <div class="table-wrap"><table class="data">
+    <thead><tr><th>What the engineer knows to look for</th><th>At Brew Board</th><th>Why BI does not have it</th></tr></thead>
+    <tbody>
+      <tr><td>Raw event and app logs</td><td><code>saw_sold_out</code> → <code>abandoned_cart</code> sessions</td><td>never loaded into the warehouse</td></tr>
+      <tr><td>Error logs</td><td>counter rejections: oat ordered after it was gone (<code>logs/counter/</code>)</td><td>in log storage</td></tr>
+      <tr><td>The definition behind a metric</td><td>the abandonment tile drops carts open under 60 seconds</td><td>BI shows the number; the model's SQL shows what it means</td></tr>
+      <tr><td>Data model constraints</td><td>an order line has one milk; a cart records no milk</td><td>architecture, not data</td></tr>
+      <tr><td>How the system behaves</td><td>sold-out status is cached for 5 minutes (<code>brewboard/stock.py</code>)</td><td>in the code</td></tr>
+      <tr><td>Contracts with other systems</td><td>the POS rejects any extra field on a line (<code>contracts/</code>)</td><td>a change needs the vendor</td></tr>
+      <tr><td>Prior attempts</td><td>the abandoned <code>substitutions</code> branch, with a note on why it stopped</td><td>git history</td></tr>
+      <tr><td>Incident history</td><td>editing a placed line once caused double charges</td><td>postmortems</td></tr>
+      <tr><td>What is not collected</td><td>when the counter makes an oat drink with almond, the line still says oat</td><td>BI cannot show what it does not have</td></tr>
+    </tbody>
+  </table></div>
+  <p>These facts are rarely in a document. That also answers "the product person's agent can read the docs". It did. The docs say that "app logs go to log storage", and nothing more.</p>
+
+  <h2>What the pair does</h2>
+  <p>Pair prototyping is not the engineer taking over the question. Each person brings what the other's agent cannot get:</p>
+  <ul>
+    <li><strong>Morgan</strong> brings the question, the judgment about what matters to customers, and the decision. Is 35% enough to build for? Morgan decides.</li>
+    <li><strong>The engineer</strong> brings where to look. "Check the session events." "That metric drops short sessions." "Somebody tried this before; look at the old branch."</li>
+    <li><strong>The agents</strong> do the reading, the queries and the counting, in minutes.</li>
+  </ul>
+  <p>They work in the same session, against real data, before anyone writes a spec. Twenty minutes in, they know something that the six-page document did not: a third of the oat customers leave at the moment they see "sold out", and the app sometimes shows "sold out" five minutes late. The second fact changes the plan. Part 5 is about what to decide first, and who decides it.</p>
+
+  <div class="build-it">
+    <p>In a clone of the series repo, make the starter: <code>python starters/make_starter.py 04 ~/backlog/part04</code>. Open <code>EXERCISE.md</code>.</p>
+    <p>Ask the question three times: in <code>product/</code> (Morgan's view), in <code>brewboard/</code> with no pointer, and in <code>brewboard/</code> with the one sentence. Use a new session each time. Write the three answers and what changed in <code>answer.md</code>, then grade it: <code>cd grade &amp;&amp; claude "/grade"</code>. Agents vary between runs. If your run without the pointer finds the logs anyway, record it. That is a real result.</p>
+  </div>
+
+  <div data-wild></div>
+
+  <div class="takeaway">
+    <p>The orders table shows only the people who stayed. The dashboard tile counts carts, and it drops fast ones, so it hides the people who left at a sell-out. The answer (35% leave) is only in app logs that the warehouse never loaded. With the same access, an agent finds it only when someone tells it the logs exist. That someone is the engineer. In pair prototyping, the product person brings the question and the decision, the engineer brings where to look, and the agents do the counting.</p>
+  </div>
